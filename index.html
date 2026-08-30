@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA OFAS-CSF | Acceso Seguro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-primary: #00d4ff;
+            --brand-dark: #000080;
+            --glass: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --text-main: #ffffff;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            /* Fondo radial profundo adoptado de configurar.html */
+            background: radial-gradient(circle at top right, #1e2a5e, #000033);
+            height: 100vh; overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+            color: var(--text-main);
+        }
+
+        /* --- EFECTO DE PAPELES DINÁMICOS --- */
+        .hoja {
+            position: absolute; background: rgba(255, 255, 255, 0.08);
+            width: 18px; height: 24px; border-radius: 2px;
+            pointer-events: none; z-index: 1;
+            animation: caer linear infinite;
+        }
+        @keyframes caer {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.6; }
+            100% { transform: translateY(110vh) rotate(720deg) translateX(80px); opacity: 0; }
+        }
+
+        /* --- TARJETAS GLASSMORPHISM --- */
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            padding: 50px; border-radius: 35px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            width: 100%; max-width: 400px;
+            text-align: center; z-index: 10;
+            animation: fadeInUp 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .hidden { display: none; }
+
+        /* --- BARRA DE CARGA EJECUTIVA --- */
+        #loader-section { display: none; flex-direction: column; align-items: center; }
+        .progress-container {
+            width: 100%; height: 6px; background: rgba(255,255,255,0.1);
+            border-radius: 10px; margin: 20px 0; overflow: hidden;
+        }
+        .progress-bar {
+            width: 0%; height: 100%; background: var(--brand-primary);
+            box-shadow: 0 0 15px var(--brand-primary);
+            transition: width 0.1s linear;
+        }
+
+        /* --- INPUTS Y FORMULARIO --- */
+        .input-group { text-align: left; margin-bottom: 20px; }
+        label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; opacity: 0.6; margin-bottom: 5px; display: block; margin-left: 5px;}
+        input {
+            width: 100%; padding: 14px; background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border); border-radius: 12px; color: white; outline: none; box-sizing: border-box;
+            transition: 0.3s;
+        }
+        input:focus { border-color: var(--brand-primary); background: rgba(255,255,255,0.1); box-shadow: 0 0 15px rgba(0, 212, 255, 0.2); }
+        
+        .btn-main {
+            width: 100%; padding: 18px; background: var(--brand-primary); color: var(--brand-dark);
+            border: none; border-radius: 15px; font-weight: 800; cursor: pointer; text-transform: uppercase; 
+            letter-spacing: 1.5px; transition: 0.3s;
+        }
+        .btn-main:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,212,255,0.4); }
+
+        /* --- TABLA DE ACTIVIDAD --- */
+        .dashboard-log { background: rgba(0,0,0,0.2); border-radius: 20px; padding: 15px; margin: 20px 0; border: 1px solid var(--glass-border); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th { color: var(--brand-primary); font-size: 0.6rem; text-align: left; text-transform: uppercase; border-bottom: 1px solid var(--glass-border); padding: 8px; }
+        td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .user-tag { color: var(--brand-primary); font-weight: 700; }
+
+        #msg { color: #ff9999; font-size: 0.8rem; margin-top: 15px; font-weight: 600; }
+
+        footer {
+            position: fixed; bottom: 0; width: 100%; padding: 15px;
+            text-align: center; font-size: 13px; color: rgba(255,255,255,0.5);
+            background: rgba(0,0,0,0.2); backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-section" class="card">
+        <span style="font-size: 60px; display:block; margin-bottom:15px;">🔐</span>
+        <h2>🗂️OFAs-CSF</h2>
+        <p style="opacity:0.6; font-size: 0.9rem; margin-bottom: 30px;">Gestión de Correspondencia Oficial</p>
+        
+        <div class="input-group">
+            <label>Usuario</label>
+            <input type="text" id="user" placeholder="Ingresar identificador" spellcheck="false">
+        </div>
+        <div class="input-group">
+            <label>Contraseña</label>
+            <input type="password" id="pass" placeholder="••••••••">
+        </div>
+        
+        <button class="btn-main" onclick="validar()">Acceder al Portal</button>
+        <p id="msg"></p>
+    </div>
+
+    <div id="loader-section" class="card">
+        <span style="font-size: 60px; display:block; margin-bottom:15px;">🚀</span>
+        <h2>Iniciando Módulos</h2>
+        <p style="opacity:0.6; font-size: 0.8rem;" id="loader-text">Verificando integridad de datos...</p>
+        <div class="progress-container">
+            <div id="bar" class="progress-bar"></div>
+        </div>
+    </div>
+
+    <div id="dashboard-section" class="card hidden">
+        <span style="font-size: 60px; display:block; margin-bottom:15px;">✨</span>
+        <h2 id="welcome-text">¡Hola!</h2>
+        <div class="dashboard-log">
+            <p style="text-align: left; font-size: 0.6rem; font-weight: 800; color: var(--brand-primary); text-transform: uppercase; margin-bottom: 10px;">Actividad Reciente</p>
+            <div style="max-height: 120px; overflow-y:auto;">
+                <table>
+                    <thead><tr><th>Usuario</th><th>Fecha</th><th>Hora</th></tr></thead>
+                    <tbody id="log-body"></tbody>
+                </table>
+            </div>
+        </div>
+        <button class="btn-main" onclick="window.location.href='menu.html'">Entrar al Tablero →</button>
+        <button style="background:none; border:none; color:rgba(255,255,255,0.4); margin-top:15px; cursor:pointer; font-size:0.8rem; text-decoration:underline;" onclick="location.reload()">Cerrar sesión</button>
+    </div>
+
+    <footer>
+        Desarrollado por <strong>🐥YEPRI-INN</strong> | 📄Gestión de datos y correspondencia oficial | &copy; 2026
+    </footer>
+
+    <script>
+        // Credenciales base del sistema
+        const credencialesBase = {
+            "MolinaR": "OFAS2026",
+            "YebraM": "OFAS2026",
+            "EscamillaL": "OFAS2026",
+            "Invitado_tem": "Temp123"
+        };
+
+        function validar() {
+            const uInput = document.getElementById('user').value.trim();
+            const pInput = document.getElementById('pass').value;
+            const ahora = new Date();
+
+            // LÓGICA DINÁMICA: Buscar en los cambios realizados en configurar.html
+            const historial = JSON.parse(localStorage.getItem('historial_ofas')) || [];
+            let accesoValido = false;
+
+            // Verificamos reconocimiento de usuario nuevo/modificado o base
+            if (historial.length > 0 && historial[0].nombre === uInput && pInput === "OFAS2026") {
+                accesoValido = true; 
+            } else if (credencialesBase[uInput] && credencialesBase[uInput] === pInput) {
+                accesoValido = true; 
+            }
+
+            if (accesoValido) {
+                // Validación Seguridad 60 días
+                const lastUpdate = localStorage.getItem('last_pass_update');
+                if (lastUpdate) {
+                    const diff = Math.ceil((ahora - new Date(lastUpdate)) / (1000 * 60 * 60 * 24));
+                    if (diff >= 60) {
+                        alert("🚨 ALERTA: Su contraseña ha caducado (60 días). Actualización obligatoria.");
+                        localStorage.setItem('usuario_logueado', uInput);
+                        window.location.href = "configurar.html";
+                        return;
+                    }
+                } else {
+                    localStorage.setItem('last_pass_update', ahora.toISOString());
+                }
+
+                iniciarCarga(uInput);
+            } else {
+                document.getElementById('msg').innerText = "❌ Credenciales no reconocidas.";
+            }
+        }
+
+        function iniciarCarga(user) {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('loader-section').style.display = 'flex';
+            
+            let prog = 0;
+            const bar = document.getElementById('bar');
+            const txt = document.getElementById('loader-text');
+            const msgs = ["Sincronizando con Servidor...", "Cargando metadatos...", "Preparando Dashboard...", "Acceso concedido."];
+
+            const interval = setInterval(() => {
+                prog += 2;
+                bar.style.width = prog + "%";
+                if(prog % 25 === 0) txt.innerText = msgs[Math.floor(prog/25)-1] || msgs[3];
+                
+                if (prog >= 100) {
+                    clearInterval(interval);
+                    mostrarBienvenida(user);
+                }
+            }, 30);
+        }
+
+        function mostrarBienvenida(u) {
+            localStorage.setItem('usuario_logueado', u);
+            let hist = JSON.parse(localStorage.getItem('historial_ofas')) || [];
+            hist.unshift({ 
+                nombre: u, 
+                fecha: new Date().toLocaleDateString(), 
+                hora: new Date().toLocaleTimeString().slice(0,5) 
+            });
+            localStorage.setItem('historial_ofas', JSON.stringify(hist));
+
+            document.getElementById('loader-section').style.display = 'none';
+            document.getElementById('dashboard-section').classList.remove('hidden');
+            document.getElementById('welcome-text').innerText = "¡Bienvenido, " + u + "!";
+            
+            document.getElementById('log-body').innerHTML = hist.slice(0, 5).map(r => `
+                <tr><td><span class="user-tag">${r.nombre}</span></td><td>${r.fecha}</td><td>${r.hora}</td></tr>
+            `).join('');
+        }
+
+        // Animación de hojas cayendo
+        setInterval(() => {
+            const hoja = document.createElement('div');
+            hoja.className = 'hoja';
+            hoja.style.left = Math.random() * 100 + "vw";
+            hoja.style.animationDuration = (Math.random() * 4 + 6) + "s";
+            document.body.appendChild(hoja);
+            setTimeout(() => hoja.remove(), 10000);
+        }, 1500);
+    </script>
+</body>
+</html>
