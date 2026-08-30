@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+   
+    <script src="seguridad.js"></script>
+
+    <meta charset="UTF-8">
+    <title>Consultar</title>
+
+        
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard General - Sistema OFA</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root { --primary: #1a2a3a; --accent: #4361ee; --success: #2ec4b6; --bg: #f1f5f9; --danger: #ef4444; --warning: #f59e0b; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 98%; margin: auto; background: white; padding: 25px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.06); }
+        
+        /* Dashboard & Cards */
+        .stats-container { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 20px; margin-bottom: 25px; }
+        .stat-card { background: #fff; padding: 25px; border-radius: 20px; text-align: center; border: 1px solid #eee; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .stat-card .value { font-size: 3rem; font-weight: 800; color: var(--primary); margin: 10px 0; }
+
+        /* Filtros Avanzados */
+        .filter-bar { background: #fff; padding: 20px; border-radius: 18px; margin-bottom: 25px; display: flex; gap: 20px; align-items: center; border: 1px solid #eee; flex-wrap: wrap; }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; }
+        .filter-group label { font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; }
+        select, input { padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0; outline: none; background: #f8fafc; font-size: 0.85rem; }
+
+        /* Modal Integral */
+        .modal { display: none; position: fixed; z-index: 2000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 35px; border-radius: 28px; width: 950px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.25); }
+        .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+        .form-group label { font-size: 0.65rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
+        .readonly-field { background: #f1f5f9 !important; border-color: #cbd5e1 !important; color: #64748b; cursor: not-allowed; }
+
+        /* Estética de Tablas */
+        .tabs { display: flex; gap: 8px; margin-bottom: -1px; position: relative; z-index: 1; }
+        .tab-btn { padding: 14px 28px; cursor: pointer; border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 12px 12px 0 0; font-weight: 700; transition: 0.3s; }
+        .tab-btn.active { background: white; border-bottom: 2px solid white; color: var(--accent); border-top: 4px solid var(--accent); }
+        .tab-content { display: none; border: 1px solid #e2e8f0; padding: 30px; background: #fff; border-radius: 0 20px 20px 20px; }
+        .tab-content.active { display: block; }
+        
+        .table-wrapper { overflow-x: auto; max-height: 500px; border-radius: 12px; border: 1px solid #eee; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th { background: #f8fafc; color: #475569; padding: 15px; text-align: left; position: sticky; top: 0; }
+        td { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; }
+
+        .btn { padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.2s; display: flex; align-items: center; gap: 8px; justify-content: center; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="title-container">
+            <div class="search-logo"></div>
+            <div>
+                <h2 style="margin:0; color: var(--primary);">📄Sistema de Gestión OFAS-CSF</h2>
+                <small style="color: #64748b;">Panel Integral de Control Administrativo y Auditoría</small>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn" style="background:var(--success); color:white" onclick="exportExcel()">📊 Exportar Excel</button>
+            <button class="btn" style="background:var(--primary); color:white" onclick="location.href='menu.html'">🏠 Menú</button>
+        </div>
+    </header>
+
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label>Mes</label>
+            <select id="fMonth" onchange="applyFilters()">
+                <option value="all">Todos</option>
+                <option value="01">Enero</option><option value="02">Febrero</option>
+                <option value="03">Marzo</option><option value="04">Abril</option>
+                <option value="05">Mayo</option><option value="06">Junio</option>
+                <option value="07">Julio</option><option value="08">Agosto</option>
+                <option value="09">Septiembre</option><option value="10">Octubre</option>
+                <option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Estatus</label>
+            <select id="fStatus" onchange="applyFilters()">
+                <option value="all">Todos</option>
+                <option value="Recibido">Recibido</option>
+                <option value="Atendido">Atendido</option>
+                <option value="Cerrado">Cerrado</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Buscador General</label>
+            <input type="text" id="fSearch" placeholder="Ente, Asunto, Folio..." onkeyup="applyFilters()" style="width: 250px;">
+        </div>
+        <button class="btn" style="background:var(--accent); color:white; margin-top: auto;" onclick="fetchData()">🔄 Actualizar</button>
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-card" style="border-top: 5px solid var(--accent)">
+            <h4>Entradas (E-OFA)</h4>
+            <div class="value" id="countE">126</div>
+        </div>
+        <div class="stat-card" style="border-top: 5px solid var(--success)">
+            <h4>Salidas (S-OFA)</h4>
+            <div class="value" id="countS">90</div>
+        </div>
+        <div style="background:white; border-radius:20px; border:1px solid #eee; padding:15px; display:flex; align-items:center;">
+            <canvas id="mainChart" style="max-height: 160px;"></canvas>
+        </div>
+    </div>
+
+    <div class="entity-dashboard">
+        <h3 style="margin-top:0;">📊 Distribución de Carga por Dependencia</h3>
+        <div class="chart-full-wrapper">
+            <canvas id="entidadChart"></canvas>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'entradas')">📥 ENTRADAS</button>
+        <button class="tab-btn" onclick="openTab(event, 'salidas')">📤 SALIDAS</button>
+        <button class="tab-btn" onclick="openTab(event, 'audit')">🕒 AUDITORÍA</button>
+    </div>
+
+    <div id="entradas" class="tab-content active">
+        <div class="table-wrapper"><table id="tableEntradas">
+            <thead><tr><th>Folio</th><th>Cons.</th><th>CSF</th><th>Oficio</th><th>Fecha</th><th>Ente</th><th>Estatus</th><th>Acción</th></tr></thead>
+            <tbody id="bodyEntradas"></tbody>
+        </table></div>
+    </div>
+
+    <div id="salidas" class="tab-content">
+        <div class="table-wrapper"><table id="tableSalidas">
+            <thead><tr><th>OFA Salida</th><th>OFA Entrada</th><th>Oficio</th><th>Siglas</th><th>Firmante</th><th>Estatus</th></tr></thead>
+            <tbody id="bodySalidas"></tbody>
+        </table></div>
+    </div>
+
+    <div id="audit" class="tab-content">
+        <div class="table-wrapper"><table class="audit-table" style="width:100%">
+            <thead><tr><th>Folio</th><th>Fecha</th><th>Usuario</th><th>Cambios Realizados</th></tr></thead>
+            <tbody id="auditBody"></tbody>
+        </table></div>
+    </div>
+</div>
+
+<div id="modalEdicion" class="modal">
+    <div class="modal-content">
+        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
+            <h2 id="modal-titulo" style="margin:0; color:var(--primary)">Detalle de Registro</h2>
+            <button onclick="cerrarModal()" style="border:none; background:none; cursor:pointer; font-size:30px;">&times;</button>
+        </header>
+        
+        <div class="form-grid">
+            <div class="form-group"><label>Consecutivo</label><input type="text" id="e-consecutivo" class="readonly-field" readonly></div>
+            <div class="form-group"><label>Folio E-OFA</label><input type="text" id="e-ofa-a" class="readonly-field" readonly></div>
+            <div class="form-group"><label>S-OFA (Triple clic p/ editar)</label><input type="text" id="e-num-salida" class="readonly-field" readonly title="Triple clic para editar bajo su propio riesgo" onclick="desbloquearCritico(event)"></div>
+
+            <div class="form-group"><label>Folio CSF</label><input type="text" id="e-csf"></div>
+            <div class="form-group"><label>Oficio Emisor</label><input type="text" id="e-oficio"></div>
+            <div class="form-group"><label>Siglas Emisor</label><input type="text" id="e-siglas"></div>
+            
+            <div class="form-group" style="grid-column: span 3;"><label>Ente / Dependencia</label><input type="text" id="e-ente"></div>
+
+            <div class="form-group"><label>Firmante</label><input type="text" id="e-firmante"></div>
+            <div class="form-group" style="grid-column: span 2;"><label>Cargo</label><input type="text" id="e-cargo"></div>
+
+            <div class="form-group"><label>Acción</label><select id="e-accion">
+                <option value="Para conocimiento">Para conocimiento</option>
+                <option value="Para respuesta">Para respuesta</option>
+                <option value="Trámite">Trámite</option>
+            </select></div>
+            <div class="form-group"><label>Medio Recibo</label><input type="text" id="e-medio"></div>
+            <div class="form-group"><label>Dispositivo</label><input type="text" id="e-dispositivo"></div>
+
+            <div class="form-group"><label>Capacidad Info</label><input type="number" id="e-capacidad"></div>
+            <div class="form-group"><label>Unidad</label><input type="text" id="e-unidad"></div>
+            <div class="form-group"><label>Fecha Recepción</label><input type="date" id="e-f-recepcion"></div>
+
+            <div class="form-group" style="grid-column: span 3;"><label>Asunto</label><textarea id="e-asunto" rows="3" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; padding:10px;"></textarea></div>
+            <div class="form-group" style="grid-column: span 2;"><label>Observaciones</label><input type="text" id="e-obs"></div>
+            <div class="form-group"><label>Estatus</label><select id="e-estatus" style="background:#fff7ed; border-color:var(--warning)">
+                <option value="Recibido">Recibido</option>
+                <option value="En Proceso">En Proceso</option>
+                <option value="Atendido">Atendido</option>
+                <option value="Cerrado">Cerrado</option>
+            </select></div>
+        </div>
+        
+        <button class="btn" style="background:var(--accent); width:100%; margin-top:25px; color:white; padding:18px;" onclick="guardarCambiosEdicion()">
+            💾 APLICAR CAMBIOS Y REGISTRAR EN AUDITORÍA
+        </button>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://ltxluqwvspkwnzodgwim.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_5wz8G2GjcNf9f3dzkgR5dw_V1gHycyU";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let dE_Full = [], dS_Full = [];
+    let charts = {};
+    let folioEditar = "";
+    let clicksCriticos = 0;
+    let maxConsecutivoReal = 126; // Base por defecto
+
+    window.onload = async () => { await fetchData(); await fetchAudit(); };
+
+    async function fetchData() {
+        // Traer registros base
+        const { data: ent } = await _supabase.from('registros').select('*');
+        const { data: sal } = await _supabase.from('ofassalida').select('*');
+        
+        // CORRECCIÓN: Obtener el valor máximo real de la columna consecutivo
+        const { data: maxRes } = await _supabase
+            .from('registros')
+            .select('consecutivo')
+            .order('consecutivo', { ascending: false })
+            .limit(1);
+
+        if (maxRes && maxRes.length > 0) {
+            // Si el último es 125, el tablero debe mostrar ese valor real
+            maxConsecutivoReal = maxRes[0].consecutivo;
+        }
+
+        dE_Full = ent || []; dS_Full = sal || [];
+        applyFilters();
+    }
+
+    async function fetchAudit() {
+        const { data: audit } = await _supabase.from('auditoria_cambios').select('*').order('fecha_movimiento', {ascending: false}).limit(10);
+        document.getElementById('auditBody').innerHTML = audit?.map(a => `
+            <tr><td>${a.folio_referencia}</td><td>${new Date(a.fecha_movimiento).toLocaleString()}</td><td>${a.usuario_cambio || 'Admin'}</td><td style="color:#64748b; font-size:9px">Cambio detectado vía Sistema</td></tr>
+        `).join('') || '<tr><td colspan="4">Sin historial</td></tr>';
+    }
+
+    function applyFilters() {
+        const month = document.getElementById('fMonth').value;
+        const status = document.getElementById('fStatus').value;
+        const search = document.getElementById('fSearch').value.toLowerCase();
+
+        const fE = dE_Full.filter(r => {
+            const matchMonth = month === 'all' || r.fecha_recepcion?.split('-')[1] === month;
+            const matchStatus = status === 'all' || r.estatus === status;
+            const matchSearch = JSON.stringify(r).toLowerCase().includes(search);
+            return matchMonth && matchStatus && matchSearch;
+        });
+
+        // Lógica de conteo visual según requerimiento
+        // Entradas: Si no hay filtros, muestra el valor máximo de la DB.
+        const cE = (month === 'all' && status === 'all' && search === "") ? maxConsecutivoReal : fE.length;
+        // Salidas: 90 base + registros existentes en la tabla ofassalida
+        const cS = dS_Full.length + (month === 'all' ? 90 : 0);
+
+        document.getElementById('countE').innerText = cE;
+        document.getElementById('countS').innerText = cS;
+
+        renderTables(fE, dS_Full);
+        initCharts(cE, cS, fE);
+    }
+
+    function renderTables(e, s) {
+        document.getElementById('bodyEntradas').innerHTML = e.map(r => `
+            <tr>
+                <td style="font-weight:800; color:var(--accent)">${r.ofa_a}</td>
+                <td>${r.consecutivo}</td><td>${r.folio_csf}</td><td>${r.oficio_emisor}</td>
+                <td>${r.fecha_recepcion}</td><td>${r.ente}</td>
+                <td><span style="padding:4px 8px; border-radius:6px; background:${r.estatus==='Cerrado'?'#dcfce7':'#fef3c7'}; color:${r.estatus==='Cerrado'?'#166534':'#92400e'}">${r.estatus || 'Recibido'}</span></td>
+                <td><button class="btn" style="padding:6px; background:var(--accent); color:white" onclick="abrirEditor('${r.ofa_a}')">✏️</button></td>
+            </tr>`).join('');
+
+        document.getElementById('bodySalidas').innerHTML = s.map(r => `
+            <tr><td style="font-weight:800; color:var(--success)">${r["OFA Salida"]}</td><td>${r["OFA Entrada"]}</td><td>${r.oficio_emisor}</td><td>${r.siglas_emisor}</td><td>${r.firmante}</td><td>${r.estatus}</td></tr>
+        `).join('');
+    }
+
+    function abrirEditor(folio) {
+        const r = dE_Full.find(item => item.ofa_a === folio);
+        if (!r) return;
+        folioEditar = folio;
+        clicksCriticos = 0;
+
+        document.getElementById('e-consecutivo').value = r.consecutivo || '';
+        document.getElementById('e-ofa-a').value = r.ofa_a || '';
+        
+        const sOfaField = document.getElementById('e-num-salida');
+        sOfaField.value = r.num_ofa_salida || 0;
+        sOfaField.classList.add('readonly-field');
+        sOfaField.readOnly = true;
+        sOfaField.style.background = "#f1f5f9";
+
+        document.getElementById('e-csf').value = r.folio_csf || '';
+        document.getElementById('e-oficio').value = r.oficio_emisor || '';
+        document.getElementById('e-siglas').value = r.siglas_emisor || '';
+        document.getElementById('e-ente').value = r.ente || '';
+        document.getElementById('e-firmante').value = r.firmante || '';
+        document.getElementById('e-cargo').value = r.cargo || '';
+        document.getElementById('e-accion').value = r.accion || 'Para conocimiento';
+        document.getElementById('e-medio').value = r.medio || '';
+        document.getElementById('e-dispositivo').value = r.tipo_dispositivo || '';
+        document.getElementById('e-capacidad').value = r.cap_info || 0;
+        document.getElementById('e-unidad').value = r.unidad_medida || '';
+        document.getElementById('e-f-recepcion').value = r.fecha_recepcion || '';
+        document.getElementById('e-asunto').value = r.asunto || '';
+        document.getElementById('e-obs').value = r.observaciones || '';
+        document.getElementById('e-estatus').value = r.estatus || 'Recibido';
+
+        document.getElementById('modalEdicion').style.display = 'flex';
+    }
+
+    function desbloquearCritico(e) {
+        clicksCriticos++;
+        if(clicksCriticos === 3) {
+            const conf = confirm("⚠️ ADVERTENCIA CRÍTICA: Está a punto de desbloquear el campo de Salidas (S-OFA). Modificar este valor puede corromper la lógica de los registros vinculados en la base de datos y descuadrar los conteos del sistema. ¿Está plenamente seguro de continuar?");
+            if(conf) {
+                e.target.classList.remove('readonly-field');
+                e.target.readOnly = false;
+                e.target.style.background = "#fee2e2";
+                e.target.style.border = "2px solid var(--danger)";
+            } else { clicksCriticos = 0; }
+        }
+    }
+
+    async function guardarCambiosEdicion() {
+        const up = {
+            folio_csf: document.getElementById('e-csf').value,
+            oficio_emisor: document.getElementById('e-oficio').value,
+            ente: document.getElementById('e-ente').value,
+            siglas_emisor: document.getElementById('e-siglas').value,
+            firmante: document.getElementById('e-firmante').value,
+            cargo: document.getElementById('e-cargo').value,
+            accion: document.getElementById('e-accion').value,
+            medio: document.getElementById('e-medio').value,
+            tipo_dispositivo: document.getElementById('e-dispositivo').value,
+            cap_info: document.getElementById('e-capacidad').value,
+            unidad_medida: document.getElementById('e-unidad').value,
+            fecha_recepcion: document.getElementById('e-f-recepcion').value,
+            asunto: document.getElementById('e-asunto').value,
+            observaciones: document.getElementById('e-obs').value,
+            estatus: document.getElementById('e-estatus').value,
+            num_ofa_salida: document.getElementById('e-num-salida').value,
+            ultima_mod: new Date().toISOString()
+        };
+
+        const { error } = await _supabase.from('registros').update(up).eq('ofa_a', folioEditar);
+        if(!error) {
+            alert("✅ Registro actualizado con éxito. Auditoría generada.");
+            cerrarModal(); fetchData(); fetchAudit();
+        } else { alert("Error: " + error.message); }
+    }
+
+    function initCharts(e, s, raw) {
+        const ctx1 = document.getElementById('mainChart').getContext('2d');
+        if(charts.main) charts.main.destroy();
+        charts.main = new Chart(ctx1, {
+            type: 'bar',
+            data: { labels: ['E-OFA', 'S-OFA'], datasets: [{ data: [e, s], backgroundColor: ['#4361ee', '#2ec4b6'], borderRadius: 10 }] },
+            options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        const ctx2 = document.getElementById('entidadChart').getContext('2d');
+        const entityMap = {};
+        raw.forEach(r => { if(r.ente) entityMap[r.ente] = (entityMap[r.ente] || 0) + 1; });
+        const sortedLabels = Object.keys(entityMap).sort((a,b) => entityMap[b] - entityMap[a]);
+        if(charts.entidad) charts.entidad.destroy();
+        charts.entidad = new Chart(ctx2, {
+            type: 'bar',
+            data: { labels: sortedLabels, datasets: [{ label: 'Oficios', data: sortedLabels.map(l => entityMap[l]), backgroundColor: 'rgba(67, 97, 238, 0.7)', borderRadius: 6 }] },
+            options: { maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
+        });
+    }
+
+    function cerrarModal() { document.getElementById('modalEdicion').style.display = 'none'; }
+    function openTab(evt, tabName) {
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    function exportExcel() {
+        const ws = XLSX.utils.table_to_sheet(document.getElementById('tableEntradas'));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Reporte_OFA");
+        XLSX.writeFile(wb, `Reporte_OFA_${new Date().toLocaleDateString()}.xlsx`);
+    }
+</script>
+</body>
+</html>
