@@ -1,1 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <script src="seguridad.js"></script>
+
+    <meta charset="UTF-8">
+    <title>Menu</title>
+   
+    <style>
+        :root {
+            --brand-primary: #00d4ff;
+            --brand-dark: #000080;
+            --glass: rgba(255, 255, 255, 0.12);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-main: #ffffff;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: radial-gradient(circle at top right, #1e2a5e, #000033);
+            height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column;
+            color: var(--text-main);
+        }
+
+        /* --- NAVBAR --- */
+        .navbar {
+            width: 100%; height: 80px;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(15px);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 40px; box-sizing: border-box;
+            border-bottom: 1px solid var(--glass-border);
+            z-index: 1000;
+        }
+
+        .nav-logo {
+            font-weight: 800; font-size: 1.4rem; letter-spacing: -1px;
+            background: linear-gradient(to right, #fff, var(--brand-primary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .user-menu {
+            position: relative; display: flex; align-items: center;
+            cursor: pointer; background: var(--glass);
+            padding: 8px 18px; border-radius: 50px; 
+            border: 1px solid var(--glass-border); transition: 0.3s ease;
+        }
+        .user-menu:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-2px); }
+
+        .user-avatar {
+            width: 38px; height: 38px; border-radius: 50%;
+            object-fit: cover; margin-left: 12px;
+            border: 2px solid var(--brand-primary);
+        }
+
+        /* --- DROPDOWN --- */
+        .dropdown {
+            position: absolute; top: 65px; right: 0;
+            background: white; width: 240px; border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            display: none; flex-direction: column; overflow: hidden;
+            z-index: 101; padding: 8px;
+        }
+        .dropdown.show { display: flex; animation: slideDown 0.3s ease-out; }
+
+        @keyframes slideDown { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
+
+        .dropdown a, .dropdown label {
+            padding: 12px 16px; color: #333; text-decoration: none;
+            font-size: 0.9rem; border-radius: 10px;
+            display: flex; align-items: center; transition: 0.2s; cursor: pointer;
+        }
+        .dropdown a:hover, .dropdown label:hover { background: #f0f7ff; color: var(--brand-dark); }
+
+        /* --- POST-ITS --- */
+        #postits-area {
+            position: fixed; top: 100px; left: 30px;
+            display: flex; flex-wrap: wrap; gap: 20px;
+            z-index: 50; pointer-events: none;
+        }
+        .postit-card {
+            pointer-events: auto; width: 210px; height: 220px; padding: 18px;
+            border-radius: 4px 4px 30px 4px;
+            box-shadow: 15px 15px 30px rgba(0,0,0,0.3);
+            position: relative; transition: 0.4s ease;
+            display: flex; flex-direction: column;
+        }
+        .postit-card:hover { transform: scale(1.05) rotate(2deg); }
+        .postit-card.minimized { height: 45px; width: 180px; padding: 10px 15px; border-radius: 10px; }
+        .color-verde { background: #c7ffc0; border-left: 5px solid #2ecc71; }
+        .color-amarillo { background: #fff9b0; border-left: 5px solid #f1c40f; }
+        .color-rojo { background: #ffcfcf; border-left: 5px solid #e74c3c; }
+        .postit-text { width: 100%; height: 100%; background: transparent; border: none; resize: none; font-family: 'Segoe Print', cursive; font-size: 0.9rem; outline: none; color: #333; }
+        .last-mod { font-size: 0.6rem; color: rgba(0,0,0,0.4); text-align: right; margin-top: 5px; }
+        .postit-controls { position: absolute; top: 8px; right: 10px; display: flex; gap: 8px; }
+        .control-btn { cursor: pointer; font-size: 1rem; opacity: 0.4; transition: 0.2s; }
+        .control-btn:hover { opacity: 1; color: #000; }
+
+        /* --- MENÚ PRINCIPAL Y ANIMACIONES --- */
+        .main-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; z-index: 10; }
+        
+        .menu-grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            width: 90%; max-width: 800px;
+        }
+
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+        }
+
+        @keyframes fadeInUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+        .delay-5 { animation-delay: 0.5s; }
+        .delay-6 { animation-delay: 0.6s; }
+
+        .menu-header-card {
+            grid-column: span 2;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            padding: 30px; border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            text-align: left; margin-bottom: 10px;
+        }
+
+        .btn-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px; border-radius: 20px;
+            text-decoration: none; color: #1e2a5e;
+            display: flex; flex-direction: column; align-items: flex-start;
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .btn-card:hover { transform: translateY(-8px); background: var(--brand-primary); color: white; box-shadow: 0 15px 30px rgba(0, 212, 255, 0.4); }
+        
+        .icon-box {
+            font-size: 2.2rem;
+            margin-bottom: 15px;
+            background: #f0f7ff;
+            width: 60px; height: 60px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 15px;
+            transition: 0.3s;
+        }
+        .btn-card:hover .icon-box { background: rgba(255,255,255,0.2); transform: scale(1.1); }
+        
+        .btn-card span { font-weight: 800; font-size: 1.1rem; }
+        .btn-card small { opacity: 0.7; margin-top: 5px; font-weight: 400; }
+
+        /* --- BOTÓN RESALTADO CREAR CSF --- */
+        .btn-special {
+            grid-column: span 2;
+            background: linear-gradient(135deg, var(--brand-dark), #1e2a5e);
+            color: white; align-items: center; text-align: center;
+            border: 2px solid var(--brand-primary);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            animation: borderPulse 3s infinite, fadeInUp 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+        }
+
+        @keyframes borderPulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 212, 255, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(0, 212, 255, 0.6); }
+        }
+
+        .btn-special .icon-box { background: rgba(255,255,255,0.1); width: 70px; height: 70px; font-size: 2.5rem; }
+
+        /* --- ANIMACIONES --- */
+        .hoja {
+            position: absolute; background: rgba(255,255,255,0.08);
+            width: 15px; height: 20px; pointer-events: none;
+            border-radius: 2px; animation: caer linear infinite;
+        }
+        @keyframes caer {
+            0% { transform: translateY(-10vh) rotate(0); opacity: 0; }
+            50% { opacity: 0.6; }
+            100% { transform: translateY(110vh) rotate(720deg) translateX(100px); opacity: 0; }
+        }
+
+        #scroll-btn {
+            position: fixed; bottom: 50px; right: 30px;
+            width: 55px; height: 55px;
+            background: var(--brand-primary); color: white;
+            border: none; border-radius: 50%;
+            cursor: pointer; font-size: 24px;
+            box-shadow: 0 8px 20px rgba(0, 212, 255, 0.4);
+            z-index: 1000; transition: 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar fade-in-up delay-1">
+        <div class="nav-logo">🗂️OFAs-CSF</div>
+        <div class="user-menu" onclick="toggleDropdown()">
+            <span id="nav-username">Cargando...</span>
+            <img src="https://via.placeholder.com/150" alt="Perfil" class="user-avatar" id="avatar-img">
+            
+            <div class="dropdown" id="userDropdown">
+                <label for="fileInput">📷 Cambiar Foto de Perfil</label>
+                <input type="file" id="fileInput" accept="image/*" onchange="previewFile()" style="display:none;">
+                <div style="height:1px; background:#eee; margin: 5px 0;"></div>
+                <a href="javascript:void(0)" onclick="addPostit()">📌 Nuevo Post-it</a>
+                <a href="configurar.html">⚙️ Configuración</a>
+               <a href="javascript:void(0)" onclick="cerrarSesion()" style="color: #c0392b; font-weight: bold;">🚪 Cerrar Sesión</a>
+            </div>
+        </div>
+    </nav>
+
+    <div id="postits-area"></div>
+
+    <div class="main-container">
+        <div class="menu-grid-container">
+            <div class="menu-header-card fade-in-up delay-2">
+                <h1 style="margin:0; font-size: 1.8rem;">Bienvenido al Sistema</h1>
+                <p style="margin:5px 0 0 0; opacity: 0.8;">Gestión de Correspondencias OFAS - CSF</p>
+            </div>
+
+            <a href="registrar.html" class="btn-card fade-in-up delay-3">
+                <div class="icon-box">📥</div>
+                <span>Registrar Documento</span>
+                <small>Alta de nueva correspondencia entrante</small>
+            </a>
+
+            <a href="consultar.html" class="btn-card fade-in-up delay-4">
+                <div class="icon-box">📊</div>
+                <span>Dashboard & Consultas</span>
+                <small>Búsqueda e indicadores en tiempo real</small>
+            </a>
+
+            <a href="modificar.html" class="btn-card fade-in-up delay-5">
+                <div class="icon-box">🛠️</div>
+                <span>Modificar Registro</span>
+                <small>Actualización de datos existentes</small>
+            </a>
+
+            <a href="utilidades.html" class="btn-card fade-in-up delay-5">
+                <div class="icon-box">💡</div>
+                <span>UTILIDADES</span>
+                <small>Descarga BD, Directorio, Alertas</small>
+            </a>
+
+            <a href="crearcsf.html" class="btn-card btn-special fade-in-up delay-6">
+                <div class="icon-box">💎</div>
+                <span>Crear CSF / S-OFA</span>
+                <small>Generación de salida oficial prioritaria</small>
+            </a>
+        </div>
+    </div>
+
+    <button id="scroll-btn" onclick="handleScroll()" class="fade-in-up delay-6">▲</button>
+
+    <script>
+        let notes = [];
+        let currentUser = "";
+        let scrollUp = true;
+
+        window.onload = function() {
+            const historial = JSON.parse(localStorage.getItem('historial_ofas')) || [];
+            if(historial.length > 0) {
+                currentUser = historial[0].nombre;
+                document.getElementById('nav-username').innerText = currentUser;
+            } else {
+                window.location.href = "index.html";
+                return;
+            }
+
+            const savedAvatar = localStorage.getItem('avatar_' + currentUser);
+            if(savedAvatar) document.getElementById('avatar-img').src = savedAvatar;
+
+            notes = JSON.parse(localStorage.getItem('notes_' + currentUser)) || [];
+            renderNotes();
+        };
+
+        function saveNotes() { localStorage.setItem('notes_' + currentUser, JSON.stringify(notes)); }
+
+        function addPostit() {
+            const colors = ['verde', 'amarillo', 'rojo'];
+            const timestamp = new Date().toLocaleString([], {hour: '2-digit', minute:'2-digit'});
+            const newNote = { id: Date.now(), text: '', color: colors[Math.floor(Math.random() * colors.length)], minimized: false, modified: timestamp };
+            notes.push(newNote);
+            saveNotes(); renderNotes();
+        }
+
+        function renderNotes() {
+            const area = document.getElementById('postits-area');
+            area.innerHTML = '';
+            notes.forEach(note => {
+                const card = document.createElement('div');
+                card.className = `postit-card color-${note.color} ${note.minimized ? 'minimized' : ''}`;
+                const title = note.text.split('\n')[0].trim() || "Nueva Nota";
+                card.innerHTML = `
+                    <div class="min-title" style="${note.minimized ? 'display:block' : 'display:none'}">${title}</div>
+                    <div class="postit-controls">
+                        <span class="control-btn" onclick="toggleMinimize(${note.id})">${note.minimized ? '□' : '–'}</span>
+                        <span class="control-btn" onclick="changeNoteColor(${note.id})">🎨</span>
+                        <span class="control-btn" onclick="deleteNote(${note.id})">✖</span>
+                    </div>
+                    <textarea class="postit-text" style="${note.minimized ? 'display:none' : 'display:block'}" oninput="updateNoteText(${note.id}, this.value)">${note.text}</textarea>
+                    <div class="last-mod" id="mod-${note.id}" style="${note.minimized ? 'display:none' : 'display:block'}">Modificado: ${note.modified}</div>
+                `;
+                area.appendChild(card);
+            });
+        }
+
+        function updateNoteText(id, text) {
+            const note = notes.find(n => n.id === id);
+            if(note) {
+                note.text = text;
+                note.modified = new Date().toLocaleString([], {hour: '2-digit', minute:'2-digit'});
+                saveNotes();
+                document.getElementById(`mod-${id}`).innerText = "Modificado: " + note.modified;
+            }
+        }
+
+        function toggleMinimize(id) { 
+            const note = notes.find(n => n.id === id); 
+            if(note) { note.minimized = !note.minimized; saveNotes(); renderNotes(); } 
+        }
+
+        function changeNoteColor(id) {
+            const note = notes.find(n => n.id === id);
+            if(note) {
+                const colors = ['verde', 'amarillo', 'rojo'];
+                let cur = colors.indexOf(note.color);
+                note.color = colors[(cur + 1) % colors.length];
+                saveNotes(); renderNotes();
+            }
+        }
+
+        function deleteNote(id) { notes = notes.filter(n => n.id !== id); saveNotes(); renderNotes(); }
+
+        function toggleDropdown() { document.getElementById('userDropdown').classList.toggle('show'); }
+
+        function previewFile() {
+            const file = document.getElementById('fileInput').files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                document.getElementById('avatar-img').src = reader.result;
+                localStorage.setItem('avatar_' + currentUser, reader.result);
+            }
+            if (file) reader.readAsDataURL(file);
+        }
+
+        function handleScroll() {
+            window.scrollTo({ top: scrollUp ? document.body.scrollHeight : 0, behavior: 'smooth' });
+            document.getElementById('scroll-btn').innerText = scrollUp ? "▼" : "▲";
+            scrollUp = !scrollUp;
+        }
+
+        setInterval(() => {
+            const hoja = document.createElement('div');
+            hoja.className = 'hoja';
+            hoja.style.left = Math.random() * 100 + "vw";
+            hoja.style.animationDuration = (Math.random() * 3 + 7) + "s";
+            document.body.appendChild(hoja);
+            setTimeout(() => hoja.remove(), 10000);
+        }, 2000);
+    </script>
+  <footer style="text-align: center; padding: 20px; font-size: 14px; color: #666; border-top: 1px solid #ddd; margin-top: 40px;">
+    <p>Desarrollado por <strong>YEPRI-INN</strong> | Gestión de datos y correspondencia oficial | &copy; 2026</p>
+</footer>
+</body>
+</html>
 
