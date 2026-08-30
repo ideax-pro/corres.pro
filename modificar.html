@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <script src="seguridad.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Avanzada 🗂️-OFAS-CSF-</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Segoe+Print&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --primary: #1e2a5e; --accent: #00d4ff; --success: #2ec4b6; --danger: #ef4444; --warning: #f59e0b; --bg: #f8fafc; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 0; color: #1e293b; overflow-x: hidden; }
+        .container { max-width: 98%; margin: 20px auto; background: white; padding: 25px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); }
+
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; }
+        .user-menu { position: relative; display: flex; align-items: center; cursor: pointer; background: #fff; padding: 5px 15px; border-radius: 50px; border: 1px solid #e2e8f0; }
+        .dropdown { position: absolute; top: 55px; right: 0; background: white; width: 230px; border-radius: 15px; display: none; flex-direction: column; padding: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); z-index: 9999; border: 1px solid #eee; }
+        .dropdown a { padding: 12px; text-decoration: none; color: #333; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; border-radius: 8px; }
+
+        #postits-area { position: fixed; top: 100px; left: 30px; display: flex; flex-wrap: wrap; gap: 25px; z-index: 9000; pointer-events: none; }
+        .postit-card { width: 180px; padding: 25px 15px 15px; border-radius: 4px; font-family: 'Segoe Print', cursive; font-size: 0.8rem; pointer-events: auto; position: relative; box-shadow: 3px 3px 10px rgba(0,0,0,0.1); transform: rotate(-2deg); transition: 0.3s; }
+        .postit-card::before { content: ''; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); width: 10px; height: 30px; border: 2.5px solid #b0b0b0; border-radius: 8px; border-bottom: none; z-index: 2; }
+        .color-amarillo { background: #fff9c4; border-bottom: 2px solid #fbc02d; color: #574b00; }
+        .color-verde { background: #c8e6c9; border-bottom: 2px solid #43a047; color: #1b5e20; }
+        .color-rojo { background: #ffcdd2; border-bottom: 2px solid #e53935; color: #b71c1c; }
+        .postit-text { width: 100%; border: none; background: transparent; resize: none; font-family: inherit; outline: none; }
+
+        .filter-section { background: #f1f5f9; padding: 20px; border-radius: 18px; margin-bottom: 20px; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+        .table-wrapper { overflow-x: auto; border-radius: 16px; border: 1px solid #e2e8f0; background: white; max-height: 550px; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; white-space: nowrap; }
+        th { background: #f8fafc; color: #475569; padding: 12px; text-align: left; font-weight: 800; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; }
+
+        .btn-icon { border: none; padding: 6px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-right: 3px; }
+        .btn-edit { background: #e0f2fe; color: #0369a1; }
+        .btn-delete { background: #fee2e2; color: #991b1b; }
+        .btn-view { background: #dcfce7; color: #166534; }
+
+        .modal { display: none; position: fixed; z-index: 4000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 24px; width: 90%; max-width: 1150px; max-height: 92vh; overflow-y: auto; }
+        .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 15px; }
+        .field { display: flex; flex-direction: column; gap: 3px; }
+        .field label { font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; }
+        .field input, .field select, .field textarea { padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 11px; outline: none; }
+
+        .tabs { display: flex; gap: 5px; }
+        .tab-btn { padding: 10px 20px; border: none; border-radius: 10px 10px 0 0; cursor: pointer; font-weight: 800; background: #e2e8f0; color: #64748b; }
+        .tab-btn.active { background: var(--primary); color: white; }
+    </style>
+</head>
+<body>
+
+<div id="postits-area"></div>
+
+<div class="container">
+    <header>
+        <div>
+            <h2 style="margin:0; color: var(--primary);">🛠️ Centro de Modificación Maestro OFAs</h2>
+            <small>Edición total de campos, filtros de fecha y auditoría administrativa</small>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button onclick="regresarAlMenu()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:50px; cursor:pointer; font-weight:800; display:flex; align-items:center; gap:8px;">🏠 Menú</button>
+            <button onclick="toggleHelp()" style="background:none; border: 1px solid var(--accent); color: var(--accent); width: 35px; height: 35px; border-radius: 50%; cursor: pointer; font-weight: 800;">?</button>
+            <div class="user-menu" onclick="toggleDropdown()">
+                <span id="nav-username">Cargando...</span>
+                <img id="nav-avatar" src="https://via.placeholder.com/150" style="width: 35px; height: 35px; border-radius: 50%; margin-left: 10px; border: 2px solid var(--accent);">
+                <div class="dropdown" id="userDropdown">
+                    <label for="fileInput" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px;">📷 Cambiar Foto</label>
+                    <input type="file" id="fileInput" accept="image/*" onchange="previewFile()" style="display:none;">
+                    <a href="javascript:void(0)" onclick="addPostit()">📌 Nuevo Post-it</a>
+                    <a href="configurar.html">⚙️ Configuración</a>
+                    <a href="javascript:void(0)" onclick="cerrarSesion()" style="color:var(--danger); font-weight:bold;">🚪 Cerrar Sesión</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="filter-section">
+        <div class="field"><label>Desde</label><input type="date" id="dateStart"></div>
+        <div class="field"><label>Hasta</label><input type="date" id="dateEnd"></div>
+        <div class="field" style="flex-grow:1"><label>Buscador Inteligente</label><input type="text" id="masterSearch" placeholder="Ente, Asunto, Folio..."></div>
+        <button onclick="applyAdvancedFilters()" style="background:var(--primary); color:white; border:none; padding:12px 25px; border-radius:10px; cursor:pointer; font-weight:800;">🔍 Filtrar</button>
+        <button onclick="exportTableExcel()" style="background:var(--success); color:white; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:800;">📊 Excel</button>
+    </div>
+
+    <div class="tabs">
+        <button id="tabEnt" class="tab-btn active" onclick="switchTab('entradas')">📥 BITÁCORA ENTRADAS</button>
+        <button id="tabSal" class="tab-btn" onclick="switchTab('salidas')">📤 BITÁCORA SALIDAS</button>
+    </div>
+
+    <div id="sec-entradas" class="table-wrapper">
+        <table id="tableEnt">
+            <thead>
+                <tr>
+                    <th>Acciones</th><th>Folio OFA</th><th>Cons.</th><th>CSF</th><th>CSF Solicitud</th><th>Oficio</th><th>Fecha Rec.</th><th>Ente</th><th>Siglas</th><th>Firmante</th><th>Cargo</th><th>Atiende</th><th>Asunto</th><th>Estatus</th><th>Medio</th><th>Dispositivo</th><th>Capacidad</th><th>Unidad</th><th>Acción</th><th>Vencimiento</th><th>Modificado por</th><th>Fecha Mod.</th>
+                </tr>
+            </thead>
+            <tbody id="bodyEnt"></tbody>
+        </table>
+    </div>
+
+    <div id="sec-salidas" class="table-wrapper" style="display:none">
+        <table id="tableSal">
+            <thead>
+                <tr>
+                    <th>Acciones</th><th>OFA Salida</th><th>OFA Entrada Rel.</th><th>Oficio</th><th>Siglas</th><th>Ente</th><th>Firmante</th><th>Cargo</th><th>Asunto</th><th>Estatus</th><th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody id="bodySal"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="modalEdit" class="modal">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3>🛠️ Edición Maestro: <span id="edit-id" style="color:var(--accent)"></span></h3>
+            <button onclick="closeModal('modalEdit')" style="border:none; background:none; font-size:28px; cursor:pointer;">&times;</button>
+        </div>
+        <div class="form-grid" id="editForm"></div>
+        <div style="margin-top:25px;"><button onclick="saveMasterUpdate()" style="width:100%; background:var(--primary); color:white; padding:15px; border:none; border-radius:12px; font-weight:800; cursor:pointer;">💾 GUARDAR Y AUDITAR CAMBIOS</button></div>
+    </div>
+</div>
+
+<div id="modalView" class="modal">
+    <div class="modal-content" style="border-top: 5px solid var(--success);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3>👁️ Detalle del Registro: <span id="view-id" style="color:var(--primary)"></span></h3>
+            <button onclick="closeModal('modalView')" style="border:none; background:#f1f5f9; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:800;">CERRAR ×</button>
+        </div>
+        <div class="form-grid" id="viewForm"></div>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://ltxluqwvspkwnzodgwim.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_5wz8G2GjcNf9f3dzkgR5dw_V1gHycyU";
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let fullData = { ent: [], sal: [] }, notes = [], activeID = '', activeTable = '', clicsSeguridad = 0;
+    let dbEntesReferencia = []; // Para autollenado de siglas
+
+    window.onload = async () => {
+        const user = localStorage.getItem('usuario_logueado');
+        document.getElementById('nav-username').innerText = user;
+        const av = localStorage.getItem('avatar_' + user);
+        if(av) document.getElementById('nav-avatar').src = av;
+        notes = JSON.parse(localStorage.getItem('notes_' + user)) || [];
+        renderNotes();
+        fetchData();
+    };
+
+    function regresarAlMenu() {
+        if(confirm("⚠️ ATENCIÓN: Si sale ahora se perderán los cambios no guardados en los formularios. ¿Regresar al menú?")) {
+            window.location.href = 'menu.html';
+        }
+    }
+
+    async function fetchData() {
+        // Cargamos referencias para autollenado
+        const { data: enlaces } = await _supabase.from('direnlaces').select('*');
+        dbEntesReferencia = enlaces || [];
+
+        const { data: ent } = await _supabase.from('registros').select('*').order('consecutivo', { ascending: false });
+        const { data: sal } = await _supabase.from('ofassalida').select('*').order('fecha_creacion', { ascending: false });
+        fullData.ent = ent || []; fullData.sal = sal || [];
+        renderTables(fullData.ent, fullData.sal);
+    }
+
+    function renderTables(ent, sal) {
+        document.getElementById('bodyEnt').innerHTML = ent.map(r => `
+            <tr>
+                <td>
+                    <button class="btn-icon btn-view" title="Ver" onclick="openViewer('${r.ofa_a}', 'ent')">👁️</button>
+                    <button class="btn-icon btn-edit" title="Editar" onclick="openEditor('${r.ofa_a}', 'registros')">✏️</button>
+                    <button class="btn-icon btn-delete" title="Borrar" onclick="prepareDelete('${r.ofa_a}')">🗑️</button>
+                </td>
+                <td style="font-weight:800; color:var(--primary)">${r.ofa_a}</td>
+                <td>${r.consecutivo}</td><td>${r.folio_csf}</td>
+                <td style="color:var(--danger); font-weight:bold;">${r.csf_solicitud || '---'}</td>
+                <td>${r.oficio_emisor}</td><td>${r.fecha_recepcion}</td>
+                <td>${r.ente}</td><td>${r.siglas_emisor}</td><td>${r.firmante}</td><td>${r.cargo}</td>
+                <td>${r.oficio_atiende || '---'}</td>
+                <td>${r.asunto?.substring(0,25)}...</td><td>${r.estatus}</td><td>${r.medio}</td>
+                <td>${r.tipo_dispositivo}</td><td>${r.cap_info}</td><td>${r.unidad_medida}</td><td>${r.accion}</td>
+                <td>${r.fecha_limite || '---'}</td>
+                <td><span class="badge-user">${r.creado_por || r.usuario_registro || 'Sistema'}</span></td>
+                <td style="font-size:8px;">${r.fecha_creacion ? new Date(r.fecha_creacion).toLocaleString() : '---'}</td>
+            </tr>`).join('');
+
+        document.getElementById('bodySal').innerHTML = sal.map(r => `
+            <tr>
+                <td>
+                    <button class="btn-icon btn-view" title="Ver" onclick="openViewer('${r["OFA Salida"]}', 'sal')">👁️</button>
+                    <button class="btn-icon btn-edit" title="Editar" onclick="openEditor('${r["OFA Salida"]}', 'ofassalida')">✏️</button>
+                </td>
+                <td style="font-weight:800; color:var(--success)">${r["OFA Salida"]}</td>
+                <td>${r["OFA Entrada"]}</td><td>${r.oficio_emisor}</td><td>${r.siglas_emisor}</td><td>${r.entidad_emi || r.ente}</td><td>${r.firmante}</td><td>${r.cargo}</td><td>${r.asunto?.substring(0,25)}...</td><td>${r.estatus}</td><td>${r.fecha_creacion}</td>
+            </tr>`).join('');
+    }
+
+    function openEditor(id, table) {
+        activeID = id; activeTable = table; clicsSeguridad = 0;
+        const r = table === 'registros' ? fullData.ent.find(x => x.ofa_a === id) : fullData.sal.find(x => x["OFA Salida"] === id);
+        document.getElementById('edit-id').innerText = id;
+        
+        const etiquetas = {
+            "entidad_emi": "ENTE EMISOR",
+            "creado_por": "ELABORADO POR",
+            "dep_dirigi": "DEPENDENCIA RECEPTORA",
+            "puesto_dirigi": "PUESTO RECEPTOR",
+            "csf_salida": "NÚMERO CSF",
+            "oficio_atende": "OFICIO DE RESPUESTA",
+            "siglas_emisor": "SIGLAS EMISOR"
+        };
+
+        document.getElementById('editForm').innerHTML = Object.entries(r).map(([k,v]) => {
+            if(['id', 'created_at', 'column_24', 'suma_ofa', 'usuario_registro', 'fecha_creacion', 'creado_por'].includes(k.toLowerCase())) return '';
+            
+            const labelText = etiquetas[k] || k.replace(/_/g,' ').toUpperCase();
+            const esFolio = ['consecutivo', 'ofa_a', 'OFA Salida', 'OFA Entrada'].includes(k);
+            const esProtegido = (k === 'num_ofa_salida');
+            const esSigla = (k === 'siglas_emisor');
+
+            return `
+                <div class="field">
+                    <label>${labelText} ${esFolio || esProtegido ? '🔒' : ''}</label>
+                    <input type="text" id="inp-${k}" value="${v||''}" 
+                    ${esFolio || esProtegido ? 'readonly' : ''} 
+                    ${esProtegido ? 'onclick="gestionarDesbloqueo()"' : ''}
+                    ${esSigla ? `oninput="buscarEntePorSigla(this.value)" list="listaSiglas"` : ''}
+                    style="${esFolio || esProtegido ? 'background:#e2e8f0; color:#64748b; cursor:not-allowed;' : ''} ${k==='csf_solicitud'?'border:1.5px solid var(--danger); font-weight:bold;':''}">
+                    
+                    ${esSigla ? `<datalist id="listaSiglas">${dbEntesReferencia.map(e => `<option value="${e.sujeto}">`).join('')}</datalist>` : ''}
+                </div>`;
+        }).join('');
+        document.getElementById('modalEdit').style.display = 'flex';
+    }
+
+    function buscarEntePorSigla(sigla) {
+        const found = dbEntesReferencia.find(e => e.sujeto.toUpperCase() === sigla.toUpperCase());
+        if (found) {
+            const campoEnte = document.getElementById('inp-ente');
+            const campoEntidadEmi = document.getElementById('inp-entidad_emi');
+            if (campoEnte) campoEnte.value = found.entidad;
+            if (campoEntidadEmi) campoEntidadEmi.value = found.entidad;
+        }
+    }
+
+    function openViewer(id, type) {
+        const r = type === 'ent' ? fullData.ent.find(x => x.ofa_a === id) : fullData.sal.find(x => x["OFA Salida"] === id);
+        document.getElementById('view-id').innerText = id;
+        document.getElementById('viewForm').innerHTML = Object.entries(r).map(([k,v]) => {
+            if(['id', 'created_at', 'column_24', 'suma_ofa'].includes(k.toLowerCase())) return '';
+            const esFolio = ['consecutivo', 'ofa_a', 'OFA Salida', 'OFA Entrada'].includes(k);
+            return `
+                <div class="field">
+                    <label>${k.replace(/_/g,' ')}</label>
+                    <input type="text" value="${v||'---'}" readonly 
+                    style="background:#f8fafc; color:${esFolio ? 'var(--primary)' : '#64748b'}; font-weight:${esFolio ? 'bold' : 'normal'}; border:1px solid #eee; cursor:not-allowed; ${k==='csf_solicitud'?'color:var(--danger); font-weight:bold;':''}">
+                </div>`;
+        }).join('');
+        document.getElementById('modalView').style.display = 'flex';
+    }
+
+   async function saveMasterUpdate() {
+    const user = localStorage.getItem('usuario_logueado') || "Usuario Maestro";
+    const update = {};
+    
+    document.querySelectorAll('#editForm input:not([readonly])').forEach(i => {
+        const key = i.id.replace('inp-','');
+        if (key) update[key] = i.value;
+    });
+
+    // Auditoría corregida para usar la columna real 'creado_por'
+    update['creado_por'] = user; 
+
+    const col = activeTable === 'registros' ? 'ofa_a' : 'OFA Salida';
+    
+    try {
+        const { error } = await _supabase.from(activeTable).update(update).eq(col, activeID);
+        if (error) throw error;
+
+        alert(`✅ ÉXITO: Registro ${activeID} actualizado por ${user}.`);
+        closeModal('modalEdit');
+        fetchData(); 
+    } catch (err) {
+        alert("❌ ERROR DE SUPABASE: " + err.message);
+    }
+}
+
+    function gestionarDesbloqueo() {
+        clicsSeguridad++;
+        if(clicsSeguridad === 3) {
+            if(confirm("⚠️ ¿Desea desbloquear un campo crítico de la base principal?")) {
+                if(prompt("Clave de Administrador:") === "OFAS2026") {
+                    const el = document.getElementById('inp-num_ofa_salida');
+                    el.readOnly = false;
+                    el.style.background = "#fff7ed";
+                    el.style.border = "2px solid var(--warning)";
+                    alert("🔓 Campo desbloqueado para edición de emergencia.");
+                } else { alert("❌ Clave incorrecta."); clicsSeguridad = 0; }
+            } else { clicsSeguridad = 0; }
+        }
+    }
+
+    function prepareDelete(folio) {
+        if(confirm(`⚠️ ADVERTENCIA: ¿Seguro que desea eliminar el registro ${folio}?\nEsta acción es definitiva.`)) {
+            const pass = prompt("🔐 Ingrese la clave maestra para confirmar el borrado:");
+            if(pass === "OFAS2026") executeDelete(folio);
+            else if(pass !== null) alert("❌ Clave incorrecta. Operación cancelada.");
+        }
+    }
+
+    async function executeDelete(folio) {
+        try {
+            const { error } = await _supabase.from('registros').delete().eq('ofa_a', folio);
+            if (error) throw error;
+            alert("🗑️ Registro eliminado satisfactoriamente.");
+            fetchData();
+        } catch (err) { alert("❌ Error al eliminar: " + err.message); }
+    }
+
+    function applyAdvancedFilters() {
+        const s = document.getElementById('dateStart').value, e = document.getElementById('dateEnd').value, t = document.getElementById('masterSearch').value.toLowerCase();
+        const filtered = fullData.ent.filter(r => {
+            const mDate = (!s || r.fecha_recepcion >= s) && (!e || r.fecha_recepcion <= e);
+            const mTerm = !t || JSON.stringify(r).toLowerCase().includes(t);
+            return mDate && mTerm;
+        });
+        renderTables(filtered, fullData.sal);
+    }
+
+    function switchTab(tab) {
+        document.getElementById('sec-entradas').style.display = tab === 'entradas' ? 'block' : 'none';
+        document.getElementById('sec-salidas').style.display = tab === 'salidas' ? 'block' : 'none';
+        document.getElementById('tabEnt').classList.toggle('active', tab === 'entradas');
+        document.getElementById('tabSal').classList.toggle('active', tab === 'salidas');
+    }
+
+    function toggleDropdown() { const dd = document.getElementById('userDropdown'); dd.style.display = dd.style.display === 'flex' ? 'none' : 'flex'; }
+    function toggleHelp() { const h = document.getElementById('helpBox'); h.style.display = h.style.display === 'block' ? 'none' : 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    
+    function addPostit() { 
+        const user = localStorage.getItem('usuario_logueado');
+        const colors = ['amarillo', 'verde', 'rojo'];
+        notes.push({ id: Date.now(), text: '', color: colors[Math.floor(Math.random()*3)] });
+        localStorage.setItem('notes_'+user, JSON.stringify(notes)); renderNotes();
+    }
+    function renderNotes() {
+        const area = document.getElementById('postits-area'); area.innerHTML = '';
+        notes.forEach(n => {
+            const div = document.createElement('div'); div.className = `postit-card color-${n.color}`;
+            div.innerHTML = `<span onclick="deleteNote(${n.id})" style="float:right; cursor:pointer;">×</span>
+                             <textarea class="postit-text" rows="4" oninput="updateNote(${n.id}, this.value)">${n.text}</textarea>`;
+            area.appendChild(div);
+        });
+    }
+    function updateNote(id, v) { const n = notes.find(x => x.id === id); n.text = v; localStorage.setItem('notes_'+localStorage.getItem('usuario_logueado'), JSON.stringify(notes)); }
+    function deleteNote(id) { notes = notes.filter(x => x.id !== id); localStorage.setItem('notes_'+localStorage.getItem('usuario_logueado'), JSON.stringify(notes)); renderNotes(); }
+    function exportTableExcel() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById('tableEnt')), `Bitacora_Modificada_Auditada.xlsx`); }
+</script>
+
+<div id="helpBox" style="display:none; position:fixed; top:85px; right:80px; width:260px; background:white; padding:20px; border-radius:15px; box-shadow:0 10px 40px rgba(0,0,0,0.2); z-index:10000; border:1px solid #eee;">
+    <h4 style="margin:0 0 10px 0;">Ayuda Administrativa</h4>
+    <p style="font-size:0.75rem; color:#475569; line-height:1.4;">
+        Panel de control total. Los folios están protegidos 🔒. Cada guardado actualiza el usuario de auditoría automáticamente. Clave maestra requerida para borrados.
+    </p>
+    <button onclick="toggleHelp()" style="width:100%; margin-top:10px; padding:8px; border:none; background:#f1f5f9; cursor:pointer; border-radius:8px;">Entendido</button>
+</div>
+
+<footer style="text-align: center; padding: 20px; font-size: 14px; color: #666; border-top: 1px solid #ddd; margin-top: 40px;">
+    <p>Desarrollado por <strong>YEPRI-INN</strong> | Centro de Gestión de Correspondencia OFAS-CSF | &copy; 2026</p>
+</footer>
+</body>
+</html>
