@@ -212,60 +212,59 @@
         await fetchAudit(); 
     };
 
-   async function fetchData() {
-    if (typeof _supabase === 'undefined') {
-        console.error("Supabase no está definido. Revisa supabaseClient.js.");
-        return;
-    }
-
-    try {
-        // Consultas a Supabase
-        const { data: ent, error: errEnt } = await _supabase.from('registros').select('*');
-        const { data: sal, error: errSal } = await _supabase.from('ofassalida').select('*');
-
-        const { data: maxRes } = await _supabase
-            .from('registros')
-            .select('consecutivo')
-            .order('consecutivo', { ascending: false })
-            .limit(1);
-
-        if (maxRes && maxRes.length > 0) {
-            maxConsecutivoReal = maxRes[0].consecutivo;
+ async function fetchData() {
+        if (typeof _supabase === 'undefined') {
+            console.error("Supabase no está definido. Revisa supabaseClient.js.");
+            return;
         }
 
-        // Continúa la lógica de renderizado de contadores/tablas...
+        try {
+            // Consultas a Supabase
+            const { data: ent, error: errEnt } = await _supabase.from('registros').select('*');
+            const { data: sal, error: errSal } = await _supabase.from('ofassalida').select('*');
 
-    } catch (err) {
-        console.error("Error al obtener datos:", err);
+            const { data: maxRes } = await _supabase
+                .from('registros')
+                .select('consecutivo')
+                .order('consecutivo', { ascending: false })
+                .limit(1);
+
+            if (maxRes && maxRes.length > 0) {
+                maxConsecutivoReal = maxRes[0].consecutivo;
+            }
+
+            dE_Full = ent || []; 
+            dS_Full = sal || [];
+            applyFilters();
+
+        } catch (err) {
+            console.error("Error al obtener datos:", err);
+        }
     }
-}
-        dE_Full = ent || []; 
-        dS_Full = sal || [];
-        applyFilters();
+
+    async function fetchAudit() {
+        if (typeof _supabase === 'undefined') return;
+
+        const { data: audit, error } = await _supabase
+            .from('auditoria_cambios')
+            .select('*')
+            .order('fecha', { ascending: false });
+
+        if (error) {
+            console.error("Error cargando auditoría:", error.message);
+            return;
+        }
+
+        document.getElementById('auditBody').innerHTML = audit?.map(a => `
+            <tr>
+                <td><strong>${a.folio || 'N/A'}</strong></td>
+                <td>${a.fecha ? new Date(a.fecha).toLocaleString() : 'N/A'}</td>
+                <td>${a.usuario || 'Admin'}</td>
+                <td>${a.cambios_realizados || 'Sin detalles'}</td>
+            </tr>
+        `).join('') || '<tr><td colspan="4">Sin historial</td></tr>';
     }
 
-   async function fetchAudit() {
-    if (typeof _supabase === 'undefined') return;
-
-    const { data: audit, error } = await _supabase
-        .from('auditoria_cambios')
-        .select('*')
-        .order('fecha', { ascending: false });
-
-    if (error) {
-        console.error("Error cargando auditoría:", error.message);
-        return;
-    }
-
-    document.getElementById('auditBody').innerHTML = audit?.map(a => `
-        <tr>
-            <td><strong>${a.folio || 'N/A'}</strong></td>
-            <td>${a.fecha ? new Date(a.fecha).toLocaleString() : 'N/A'}</td>
-            <td>${a.usuario || 'Admin'}</td>
-            <td>${a.cambios_realizados || 'Sin detalles'}</td>
-        </tr>
-    `).join('') || '<tr><td colspan="4">Sin historial</td></tr>';
-}
     function applyFilters() {
         const month = document.getElementById('fMonth').value;
         const status = document.getElementById('fStatus').value;
@@ -384,7 +383,9 @@
         const { error } = await _supabase.from('registros').update(up).eq('ofa_a', folioEditar);
         if(!error) {
             alert("✅ Registro actualizado con éxito. Auditoría generada.");
-            cerrarModal(); fetchData(); fetchAudit();
+            cerrarModal(); 
+            fetchData(); 
+            fetchAudit();
         } else { alert("Error: " + error.message); }
     }
 
@@ -410,6 +411,7 @@
     }
 
     function cerrarModal() { document.getElementById('modalEdicion').style.display = 'none'; }
+    
     function openTab(evt, tabName) {
         document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
         document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -423,6 +425,12 @@
         XLSX.utils.book_append_sheet(wb, ws, "Reporte_OFA");
         XLSX.writeFile(wb, `Reporte_OFA_${new Date().toLocaleDateString()}.xlsx`);
     }
+
+    // Inicialización al cargar la ventana
+    window.onload = function() {
+        fetchData();
+        fetchAudit();
+    };
 </script>
 </body>
 </html>
