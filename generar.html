@@ -5,15 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CORRES PRO Intel | Diseñador de Plantillas</title>
     
-    <!-- Supabase y Librerías -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.11/docxtemplater.js"></script>
     <script src="./supabaseClient.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         :root {
             --bg: #0b0f1a; --panel: #161e2d; --accent: #00f2fe; --green: #10b981;
-            --text: #f8fafc; --dim: #94a3b8; --border: rgba(255,255,255,0.08);
+            --danger: #ef4444; --text: #f8fafc; --dim: #94a3b8; --border: rgba(255,255,255,0.08);
             --bg-card: linear-gradient(145deg, #161e2d 0%, #1c2539 100%);
         }
 
@@ -33,6 +34,7 @@
             padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 700;
             font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: 0.3s;
         }
+        .btn-action:hover { background: rgba(255,255,255,0.1); }
         .btn-neon-green { background: var(--green); color: #000; border: none; }
         .btn-neon-green:hover { box-shadow: 0 0 15px var(--green); transform: translateY(-2px); }
 
@@ -78,6 +80,23 @@
         .doc-body { flex-grow: 1; font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; }
 
         .doc-footer { border-top: 1px solid #ccc; padding-top: 10px; font-size: 0.65rem; text-align: center; color: #555; }
+
+        /* Modal Reemplazo */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center; z-index: 999;
+        }
+        .modal-card {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 16px; padding: 25px; width: 90%; max-width: 450px; text-align: center;
+        }
+        .plantilla-item-option {
+            background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+            padding: 10px; border-radius: 8px; margin: 8px 0; text-align: left;
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+        }
+        .plantilla-item-option:hover { border-color: var(--accent); background: rgba(0,242,254,0.05); }
     </style>
 </head>
 <body>
@@ -88,17 +107,23 @@
         <p style="margin:0; font-size:0.65rem; color:var(--dim)">DISEÑO Y PERSONALIZACIÓN DE FORMATOS OFICIALES 2026</p>
     </div>
     <div style="display:flex; gap:10px">
-        <a href="csfcrear.html" class="btn-action"><i class="fas fa-arrow-left"></i> REGRESAR</a>
-        <button onclick="guardarEnSupabase()" class="btn-action btn-neon-green"><i class="fas fa-cloud-upload-alt"></i> GUARDAR EN SUPABASE</button>
+        <a href="csfcrear.html" class="btn-action"><i class="fas fa-arrow-left"></i> REGRESAR A DASHBOARD</a>
+        <button id="btnGuardar" onclick="guardarEnSupabase()" class="btn-action btn-neon-green">
+            <i class="fas fa-cloud-upload-alt"></i> GUARDAR EN SUPABASE
+        </button>
     </div>
 </div>
 
 <div class="editor-container">
     
-    <!-- PANEL DE CONTROL -->
     <div class="control-panel">
         <div class="section-title"><i class="fas fa-sliders-h"></i> Configuración General</div>
         
+        <div class="form-group">
+            <label>Nombre de la Plantilla</label>
+            <input type="text" id="nombrePlantilla" placeholder="Ej: Plantilla Solicitud Obras 2026">
+        </div>
+
         <div class="form-group">
             <label>Tipo de Documento</label>
             <select id="tipoDoc" onchange="cargarPlantillaBase()">
@@ -151,7 +176,6 @@
         </div>
     </div>
 
-    <!-- VISTA PREVIA -->
     <div class="preview-stage">
         <div class="document-paper">
             <div>
@@ -171,6 +195,15 @@
 
 </div>
 
+<div id="modalReemplazo" class="modal-overlay">
+    <div class="modal-card">
+        <h3 style="margin-top:0; color:var(--accent);"><i class="fas fa-exclamation-triangle"></i> CUPO LLENO (3/3)</h3>
+        <p style="font-size:0.8rem; color:var(--dim);">Ya existen 3 plantillas registradas para este tipo. Selecciona cuál plantilla deseas reemplazar:</p>
+        <div id="listaPlantillasReemplazo"></div>
+        <button onclick="cerrarModalReemplazo()" class="btn-action" style="margin-top:15px; width:100%;">CANCELAR</button>
+    </div>
+</div>
+
 <script>
     const plantillasBase = {
         solicitud: `FOLIO: CSF/{csf_salida}/2026\nASUNTO: Solicitud de Información / Gestión\nFECHA: {fecha}\n\n{dirigido_a}\n{dep_dirigi}\nPRESENTE.\n\nPor medio del presente conducto, me dirijo a usted de la manera más atenta para hacer de su conocimiento el asunto relativo a: {asunto}.\n\nAsimismo, hago referencia al oficio emisor número {oficio_emisor}, mediante el cual se le da seguimiento oportuno a los trámites correspondientes registrados bajo la entrada {OFA Entrada}.\n\nSin otro particular por el momento, aprovecho la ocasión para enviarle un cordial saludo.\n\n\nATENTAMENTE,\n\n__________________________________\n{firmante}\nCorrespondencia PRO`,
@@ -180,6 +213,9 @@
     function cargarPlantillaBase() {
         const tipo = document.getElementById('tipoDoc').value;
         document.getElementById('cuerpoDoc').value = plantillasBase[tipo];
+        if(!document.getElementById('nombrePlantilla').value) {
+            document.getElementById('nombrePlantilla').value = `Plantilla ${tipo.toUpperCase()} ${new Date().toLocaleDateString('es-MX')}`;
+        }
         actualizarPreview();
     }
 
@@ -207,8 +243,121 @@
         }
     }
 
-    async function guardarEnSupabase() {
-        alert("Integración lista para subir el documento procesado a Supabase Storage.");
+    // GENERAR DOCX EN MEMORIA Y PROCESAR PROCESO DE SUBIDA
+    async function guardarEnSupabase(idPlantillaAEliminar = null) {
+        const btn = document.getElementById('btnGuardar');
+        const tipo = document.getElementById('tipoDoc').value;
+        const nombre = document.getElementById('nombrePlantilla').value || `Plantilla ${tipo}`;
+
+        try {
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> VERIFICANDO...`;
+
+            // 1. Validar límite de 3 si no venimos de confirmación de reemplazo
+            if (!idPlantillaAEliminar) {
+                const { data: plantillasExistentes, error: errQuery } = await supabaseClient
+                    .from('plantillas')
+                    .select('id, nombre, creado_en')
+                    .eq('tipo', tipo);
+
+                if (errQuery) throw errQuery;
+
+                if (plantillasExistentes.length >= 3) {
+                    mostrarModalReemplazo(plantillasExistentes);
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> GUARDAR EN SUPABASE`;
+                    return;
+                }
+            }
+
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> GENERANDO Y SUBIENDO...`;
+
+            // 2. Construir el documento DOCX plano estructurado
+            const leyenda = document.getElementById('inputLeyenda').value;
+            const cuerpo = document.getElementById('cuerpoDoc').value;
+            const pie = document.getElementById('inputPie').value;
+
+            const contenidoDocumento = `${leyenda}\n\n${cuerpo}\n\n_____________________________________\n${pie}`;
+            const blobDocx = new Blob([contenidoDocumento], { type: "text/plain;charset=utf-8" });
+
+            // 3. Subir archivo a Supabase Storage
+            const fileFileName = `${tipo}_${Date.now()}.txt`;
+            const storagePath = `formatos/${fileFileName}`;
+
+            const { data: uploadData, error: uploadError } = await supabaseClient
+                .storage
+                .from('plantillas')
+                .upload(storagePath, blobDocx, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            // Obtener URL Pública
+            const { data: urlData } = supabaseClient
+                .storage
+                .from('plantillas')
+                .getPublicUrl(storagePath);
+
+            const publicUrl = urlData.publicUrl;
+
+            // 4. Si se seleccionó reemplazar una plantilla anterior, eliminarla primero
+            if (idPlantillaAEliminar) {
+                await supabaseClient.from('plantillas').delete().eq('id', idPlantillaAEliminar);
+            }
+
+            // 5. Registrar metadata en la tabla 'plantillas'
+            const { error: insertError } = await supabaseClient
+                .from('plantillas')
+                .insert([
+                    {
+                        nombre: nombre,
+                        tipo: tipo,
+                        url: publicUrl,
+                        storage_path: storagePath,
+                        es_predeterminada: false
+                    }
+                ]);
+
+            if (insertError) throw insertError;
+
+            alert("✅ ¡Plantilla guardada exitosamente en Supabase!");
+            window.location.href = "csfcrear.html";
+
+        } catch (err) {
+            console.error("Error al guardar la plantilla:", err);
+            alert("❌ Ocurrió un error al guardar: " + (err.message || err));
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> GUARDAR EN SUPABASE`;
+        }
+    }
+
+    // MANEJO DE MODAL DE CUPO DE REEMPLAZO
+    function mostrarModalReemplazo(plantillas) {
+        const contenedor = document.getElementById('listaPlantillasReemplazo');
+        contenedor.innerHTML = '';
+
+        plantillas.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'plantilla-item-option';
+            div.innerHTML = `
+                <div>
+                    <strong>${p.nombre}</strong><br>
+                    <small style="color:var(--dim)">Creada: ${new Date(p.creado_en).toLocaleDateString()}</small>
+                </div>
+                <i class="fas fa-exchange-alt" style="color:var(--accent)"></i>
+            `;
+            div.onclick = () => {
+                cerrarModalReemplazo();
+                guardarEnSupabase(p.id);
+            };
+            contenedor.appendChild(div);
+        });
+
+        document.getElementById('modalReemplazo').style.display = 'flex';
+    }
+
+    function cerrarModalReemplazo() {
+        document.getElementById('modalReemplazo').style.display = 'none';
     }
 
     // Inicializar
