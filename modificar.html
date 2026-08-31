@@ -187,11 +187,11 @@
 
     async function fetchData() {
         // Carga de referencias desde Supabase cliente global
-        const { data: enlaces } = await supabase.from('direnlaces').select('*');
+        const { data: enlaces } = await _supabase.from('direnlaces').select('*');
         dbEntesReferencia = enlaces || [];
 
-        const { data: ent } = await supabase.from('registros').select('*').order('consecutivo', { ascending: false });
-        const { data: sal } = await supabase.from('ofassalida').select('*').order('fecha_creacion', { ascending: false });
+        const { data: ent } = await _supabase.from('registros').select('*').order('consecutivo', { ascending: false });
+        const { data: sal } = await _supabase.from('ofassalida').select('*').order('fecha_creacion', { ascending: false });
         
         fullData.ent = ent || []; 
         fullData.sal = sal || [];
