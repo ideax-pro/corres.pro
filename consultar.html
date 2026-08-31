@@ -218,15 +218,15 @@
             return;
         }
 
-        // Consultas a Supabase
-        const { data: ent, error: errEnt } = await supabase.from('registros').select('*');
-        const { data: sal, error: errSal } = await supabase.from('ofassalida').select('*');
-        
-        const { data: maxRes } = await supabase
-            .from('registros')
-            .select('consecutivo')
-            .order('consecutivo', { ascending: false })
-            .limit(1);
+    // Consultas a Supabase
+const { data: ent, error: errEnt } = await _supabase.from('registros').select('*');
+const { data: sal, error: errSal } = await _supabase.from('ofassalida').select('*');
+
+const { data: maxRes } = await _supabase
+    .from('registros')
+    .select('consecutivo')
+    .order('consecutivo', { ascending: false })
+    .limit(1);
 
         if (maxRes && maxRes.length > 0) {
             maxConsecutivoReal = maxRes[0].consecutivo;
