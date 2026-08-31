@@ -3,10 +3,13 @@
 <head>
     <script src="seguridad.js"></script>
     <meta charset="UTF-8">
-    <title>Registrar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar - OFAS-CSF</title>
+    
+    <!-- Librerías Externas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
- 
+
     <style>
         :root {
             --primary: #1a2a3a; --accent: #3498db; --danger: #d9534f;
@@ -45,10 +48,9 @@
         input[readonly] { background: #e9ecef; }
         .full-width { grid-column: 1 / -1; }
 
-        /* MEJORA: Estilo para campo CSF Solicitud */
         .input-csf-solicitud { border: 2px solid var(--danger) !important; font-weight: bold; }
 
-        /* Pollito */
+        /* Asistente */
         #asistente-pollito { position: fixed; bottom: 20px; right: 20px; text-align: center; z-index: 1000; }
         .burbuja { background: white; border: 2px solid var(--primary); border-radius: 15px; padding: 10px; margin-bottom: 5px; font-size: 0.8rem; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 180px; }
         .pollito-body { font-size: 50px; display: inline-block; animation: aletear 0.4s infinite alternate ease-in-out; }
@@ -137,7 +139,7 @@
             <legend>Acciones y Asunto</legend>
             <div class="form-grid">
                 <div class="field"><label>Acción</label><select id="accion" onchange="playTick()"><option>Para respuesta</option><option>Para archivo</option><option>Para conocimiento</option><option>Seguimiento correo</option></select></div>
-                <div class="field"><label>Salidas (S-OFA)</label><input type="number" id="num_ofa_salida" value="0" onchange="playTick()"></div>
+                <div class="field"><label>Salidas (S-OFA)</label><input type="number" id="num_ofa_salida" value="0" min="0" onchange="playTick()"></div>
                 <div class="field"><label>Estatus</label><select id="estatus" onchange="playTick()"><option>Recibido</option><option>Atendido</option><option>En Proceso</option><option>Cerrado</option></select></div>
                 <div class="field full-width"><label>Asunto</label><textarea id="asunto" rows="2" required onchange="playTick()"></textarea></div>
                 <div class="field full-width"><label>Observaciones</label><textarea id="observaciones" rows="2" onchange="playTick()"></textarea></div>
@@ -174,7 +176,10 @@
     </div>
 </div>
 
-<div id="asistente-pollito"><div class="burbuja" id="mensaje-pollito">¡Listo!</div><div class="pollito-body">🐥</div></div>
+<div id="asistente-pollito">
+    <div class="burbuja" id="mensaje-pollito">¡Listo!</div>
+    <div class="pollito-body">🐥</div>
+</div>
 
 <script>
     const SUPABASE_URL = "https://ltxluqwvspkwnzodgwim.supabase.co";
@@ -205,8 +210,8 @@
     function updateProgressBar() {
         const inputs = document.querySelectorAll('#regForm input:not([readonly]), #regForm select, #regForm textarea');
         let filled = 0;
-        inputs.forEach(i => { if(i.value && i.value !== "0" && i.value !== "") filled++; });
-        document.getElementById('progressBar').style.width = (filled / inputs.length) * 100 + '%';
+        inputs.forEach(i => { if(i.value && i.value !== "0" && i.value.trim() !== "") filled++; });
+        document.getElementById('progressBar').style.width = ((filled / inputs.length) * 100) + '%';
     }
 
     function exportToExcel() {
@@ -228,8 +233,11 @@
 
     function calcularVencimiento(fechaStart) {
         const fechaBase = fechaStart || document.getElementById('fecha_recepcion_input').value;
+        if (!fechaBase) return;
+        
         let fecha = new Date(fechaBase + 'T00:00:00');
         let diasHabilesContados = 0;
+        
         while (diasHabilesContados < 4) {
             fecha.setDate(fecha.getDate() + 1);
             if (fecha.getDay() !== 0 && fecha.getDay() !== 6) diasHabilesContados++;
@@ -239,17 +247,25 @@
 
     async function updateConsecutives() {
         try {
-            const { data, error } = await _supabase.from('registros').select('consecutivo, ofa_a').order('consecutivo', { ascending: false }).limit(1);
+            const { data, error } = await _supabase
+                .from('registros')
+                .select('consecutivo, ofa_a')
+                .order('consecutivo', { ascending: false })
+                .limit(1);
+                
             if (error) throw error;
+            
             let lastCons = 125, lastOFA = 58;
             if (data && data.length > 0) {
-                lastCons = parseInt(data[0].consecutivo);
+                lastCons = parseInt(data[0].consecutivo) || 125;
                 const match = (data[0].ofa_a || "").match(/\d+/);
                 if (match) lastOFA = parseInt(match[0]);
             }
             document.getElementById('consecutivo').value = lastCons + 1;
             document.getElementById('ofa_a').value = `E-OFA-${(lastOFA + 1).toString().padStart(4, '0')}`;
-        } catch (e) { console.error("Error al cargar consecutivos:", e); }
+        } catch (e) { 
+            console.error("Error al cargar consecutivos:", e.message); 
+        }
     }
 
     async function saveToSupabase() {
@@ -258,7 +274,7 @@
         const numSalidasValue = document.getElementById('num_ofa_salida').value;
 
         if(!document.getElementById('folio_csf').value || !document.getElementById('asunto').value) {
-            return alert("⚠️ Por favor llena los campos obligatorios.");
+            return alert("⚠️ Por favor llena los campos obligatorios (Folio Interno CSF y Asunto).");
         }
 
         try {
@@ -266,20 +282,17 @@
                 consecutivo: parseInt(document.getElementById('consecutivo').value),
                 ofa_a: ofaEntrada,
                 folio_csf: document.getElementById('folio_csf').value,
-                // MEJORA: Guardado de CSF Solicitud
                 csf_solicitud: document.getElementById('csf_solicitud').value,
                 ente: document.getElementById('ente').value,
                 siglas_emisor: document.getElementById('siglas_emisor').value,
                 oficio_emisor: document.getElementById('oficio_emisor').value,
                 firmante: document.getElementById('firmante').value,
                 cargo: document.getElementById('cargo').value,
-                // MEJORA: Guardado de Oficio que Atiende
                 oficio_atiende: document.getElementById('oficio_atiende').value,
                 accion: document.getElementById('accion').value,
-                num_ofa_salida: numSalidasValue, 
+                num_ofa_salida: parseInt(numSalidasValue) || 0, 
                 medio: document.getElementById('medio').value,
                 tipo_dispositivo: document.getElementById('tipo_dispositivo').value,
-                // MEJORA: Cap Info se guarda como alfanumérico
                 cap_info: document.getElementById('cap_info').value,
                 unidad_medida: document.getElementById('unidad_medida').value,
                 fecha_limite: document.getElementById('fecha_limite').value,
@@ -313,16 +326,16 @@
         tbody.innerHTML = data.map(r => {
             const fCreacion = r.fecha_creacion ? new Date(r.fecha_creacion).toLocaleString('es-MX', { hour12: false }) : '---';
             return `<tr>
-                <td>${r.consecutivo}</td>
-                <td><b>${r.ofa_a}</b></td>
-                <td>${r.folio_csf}</td>
+                <td>${r.consecutivo || ''}</td>
+                <td><b>${r.ofa_a || ''}</b></td>
+                <td>${r.folio_csf || ''}</td>
                 <td style="color:var(--danger); font-weight:bold;">${r.csf_solicitud || '---'}</td>
                 <td>${r.oficio_emisor || ''}</td>
                 <td>${r.fecha_recepcion || ''}</td>
                 <td style="color: #2c3e50; font-weight: bold;">${fCreacion}</td>
                 <td>${r.ente || ''}</td>
                 <td>${r.fecha_limite || ''}</td>
-                <td><b>${r.estatus}</b></td>
+                <td><b>${r.estatus || ''}</b></td>
                 <td><span class="badge-user">${r.usuario_registro || ''}</span></td>
                 <td>${r.asunto || ''}</td>
             </tr>`;
@@ -339,6 +352,7 @@
         try {
             const { data: enlaces, error } = await _supabase.from('direnlaces').select('sujeto, entidad, enlace, puesto');
             if (error) throw error;
+            
             if (enlaces) {
                 db_direnlaces = enlaces;
                 const dl = document.getElementById('lista_siglas');
@@ -350,9 +364,18 @@
                     dl.appendChild(opt);
                 });
             }
-            const { data: hist } = await _supabase.from('registros').select('*').order('consecutivo', { ascending: false }).limit(25);
-            if (hist) { history_data = hist; renderTable(hist); updateDashboard(hist); }
-        } catch (e) { console.error("Error al cargar datos:", e.message); }
+            
+            const { data: hist, error: errHist } = await _supabase.from('registros').select('*').order('consecutivo', { ascending: false }).limit(25);
+            if (errHist) throw errHist;
+            
+            if (hist) { 
+                history_data = hist; 
+                renderTable(hist); 
+                updateDashboard(hist); 
+            }
+        } catch (e) { 
+            console.error("Error al cargar datos:", e.message); 
+        }
     }
 
     function fetchDetails(s) { 
@@ -390,9 +413,6 @@
         await loadData();
     };
 </script>
-    
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./supabaseClient.js"></script>
-    
+
 </body>
 </html>
