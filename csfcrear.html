@@ -3,9 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>METAX Intel | Dashboard Final 2026</title>
+    <title>CORRES PRO Intel | Dashboard Final 2026</title>
     
+    <!-- 1. Carga de Supabase y cliente centralizado -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabaseClient.js"></script>
+
+    <!-- 2. Scripts de seguridad y librerías externas -->
+    <script src="seguridad.js"></script>
     <script src="https://unpkg.com/pizzip@3.1.4/dist/pizzip.js"></script>
     <script src="https://unpkg.com/docxtemplater@3.37.2/build/docxtemplater.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -112,7 +117,7 @@
 
 <div class="glass-header">
     <div>
-        <h1 style="margin:0; font-size:1.6rem">📄METAX <span style="font-weight:100">DASHBOARD</span></h1>
+        <h1 style="margin:0; font-size:1.6rem">📄CORRES PRO <span style="font-weight:100">DASHBOARD</span></h1>
         <p style="margin:0; font-size:0.7rem; color:var(--dim)">SISTEMA DE CONSULTA E HISTORIAL DE DESCARGAS</p>
     </div>
     <input type="text" id="mainSearch" class="search-input" placeholder="Buscar por nombre, entidad o folio..." onkeyup="busquedaReal()">
@@ -144,15 +149,21 @@
 <div id="main-view"></div>
 
 <script>
-    const _db = supabase.createClient('https://ltxluqwvspkwnzodgwim.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0eGx1cXd2c3Brd256b2Rnd2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwODg3MTYsImV4cCI6MjA4NTY2NDcxNn0.H72PXqbm5RW1w5Qz9AK45506jIGfHp6syVyOZKnlX1E');
-
     let datosLocales = [];
     let filtroActual = 'todos';
     const historialDescargas = {};
 
     async function init() {
-        const { data, error } = await _db.from('ofassalida').select('*');
-        if (error) return;
+        if (typeof supabase === 'undefined') {
+            console.error("Supabase no está disponible.");
+            return;
+        }
+
+        const { data, error } = await supabase.from('ofassalida').select('*');
+        if (error) {
+            console.error("Error al obtener datos:", error);
+            return;
+        }
         datosLocales = data.sort((a, b) => (b.csf_salida || 0) - (a.csf_salida || 0));
         actualizarContadores();
         aplicarRender();
@@ -172,7 +183,6 @@
         const totalRegistros = datosLocales.length;
         const pendientes = datosLocales.filter(r => !r["OFA Salida"] || r["OFA Salida"] === 'Pendiente').length;
         
-        // Estadísticas Mini Dashboard
         const totalSolicitudes = datosLocales.filter(r => r["OFA Entrada"] && r["OFA Entrada"] !== '---').length;
         const totalRespuestas = datosLocales.filter(r => r["OFA Salida"] && r["OFA Salida"] !== 'Pendiente' && r["OFA Salida"] !== '').length;
 
@@ -288,8 +298,10 @@
     async function down(id, tipo) {
         mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
         try {
-            const { data: r } = await _db.from('ofassalida').select('*').eq('id', id).single();
-            const url = tipo === 'solicitud' ? "https://ltxluqwvspkwnzodgwim.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx" : "https://ltxluqwvspkwnzodgwim.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx";
+            const { data: r } = await supabase.from('ofassalida').select('*').eq('id', id).single();
+            const url = tipo === 'solicitud' 
+                ? "https://ltxluqwvspkwnzodgwim.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx" 
+                : "https://ltxluqwvspkwnzodgwim.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx";
             
             const res = await fetch(url);
             const buf = await res.arrayBuffer();
@@ -311,6 +323,7 @@
 
             mostrarNotificacion('DESCARGA EXITOSA', `Documento generado el ${fechaActual}`);
         } catch(e) { 
+            console.error(e);
             mostrarNotificacion('ERROR', 'No se pudo generar el archivo.'); 
         }
     }
@@ -326,7 +339,7 @@
         const ws = XLSX.utils.json_to_sheet(dataExcel);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Correspondencia_2026");
-        XLSX.writeFile(wb, "REPORTE_METAX_2026.xlsx");
+        XLSX.writeFile(wb, "REPORTE_CORRES_PRO_2026.xlsx");
         mostrarNotificacion('REPORTE EXCEL', 'El archivo se ha generado con éxito.');
     }
 
@@ -334,11 +347,8 @@
 </script>
 
 <footer style="text-align: center; padding: 40px; font-size: 0.7rem; color: var(--dim); border-top: 1px solid var(--border); margin-top: 20px;">
-    <p>Desarrollado por <strong>🐤YEPRI-INN</strong> | Dashboard METAX | &copy; 2026</p>
+    <p>Desarrollado por <strong>🐤YEPRI-INN</strong> | Dashboard CORRES PRO | &copy; 2026</p>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./supabaseClient.js"></script>
-    
 </body>
 </html>
