@@ -226,34 +226,29 @@
         </div>
     </div>
 </div>
-
 <script>
+    // Referencia resiliente al cliente de Supabase
+    const client = window._supabase || window.supabaseClient;
+
     let datosLocales = [];
     let filtroActual = 'todos';
     const historialDescargas = {};
     let folioSeleccionado = null;
 
-    // Estado local de Plantillas Preestablecidas (hasta 3 por tipo)
-    let plantillasBase = {
-        solicitud: [
-            { id: 1, nombre: 'Plantilla Oficial Solicitud V1', url: 'https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx' },
-            { id: 2, nombre: 'Plantilla Solicitud Alternativa', url: '' },
-            { id: 3, nombre: 'Plantilla Urgente Solicitud', url: '' }
-        ],
-        respuesta: [
-            { id: 10, nombre: 'Plantilla Oficial Respuesta V1', url: 'https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx' },
-            { id: 11, nombre: 'Plantilla Respuesta Ejecutiva', url: '' },
-            { id: 12, nombre: 'Plantilla Respuesta Externa', url: '' }
-        ]
-    };
+    // Arreglo global para almacenar las plantillas obtenidas desde Supabase
+    let plantillasDinamicas = [];
 
     async function init() {
-        if (typeof _supabase === 'undefined') {
-            console.error("El cliente _supabase no está disponible.");
+        if (!client) {
+            console.error("El cliente de Supabase no está disponible.");
             return;
         }
 
-        const { data, error } = await _supabase.from('ofassalida').select('*');
+        // 1. Cargar las plantillas registradas en Supabase
+        await cargarPlantillasDesdeSupabase();
+
+        // 2. Cargar registros de correspondenica
+        const { data, error } = await client.from('ofassalida').select('*');
         if (error) {
             console.error("Error al obtener datos:", error);
             return;
@@ -263,8 +258,29 @@
         aplicarRender();
     }
 
+    // Carga las plantillas guardadas previamente en la tabla 'plantillas'
+    async function cargarPlantillasDesdeSupabase() {
+        try {
+            const { data, error } = await client
+                .from('plantillas')
+                .select('*')
+                .order('creado_en', { ascending: false });
+
+            if (error) throw error;
+            plantillasDinamicas = data || [];
+        } catch (err) {
+            console.error("Error al cargar plantillas desde Supabase:", err);
+            // Fallback por defecto en caso de no encontrar o fallar la consulta
+            plantillasDinamicas = [
+                { id: 1, nombre: 'Plantilla Oficial Solicitud V1', tipo: 'solicitud', url: 'https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx' },
+                { id: 2, nombre: 'Plantilla Oficial Respuesta V1', tipo: 'respuesta', url: 'https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx' }
+            ];
+        }
+    }
+
     function mostrarNotificacion(titulo, mensaje) {
         const container = document.getElementById('toast-container');
+        if (!container) return;
         const toast = document.createElement('div');
         toast.className = 'toast';
         toast.innerHTML = `<div><strong>${titulo}</strong><br><small>${mensaje}</small></div>`;
@@ -279,10 +295,15 @@
         const totalSolicitudes = datosLocales.filter(r => r["OFA Entrada"] && r["OFA Entrada"] !== '---').length;
         const totalRespuestas = datosLocales.filter(r => r["OFA Salida"] && r["OFA Salida"] !== 'Pendiente' && r["OFA Salida"] !== '').length;
 
-        document.getElementById('count-todos').innerText = totalRegistros;
-        document.getElementById('count-pendientes').innerText = pendientes;
-        document.getElementById('stat-solicitudes').innerText = totalSolicitudes;
-        document.getElementById('stat-respuestas').innerText = totalRespuestas;
+        const elemTodos = document.getElementById('count-todos');
+        const elemPendientes = document.getElementById('count-pendientes');
+        const elemStatSol = document.getElementById('stat-solicitudes');
+        const elemStatRes = document.getElementById('stat-respuestas');
+
+        if (elemTodos) elemTodos.innerText = totalRegistros;
+        if (elemPendientes) elemPendientes.innerText = pendientes;
+        if (elemStatSol) elemStatSol.innerText = totalSolicitudes;
+        if (elemStatRes) elemStatRes.innerText = totalRespuestas;
     }
 
     function filtrarVista(tipo, btn) {
@@ -301,15 +322,23 @@
 
     function aplicarRender() {
         const view = document.getElementById('main-view');
+        if (!view) return;
         view.innerHTML = '';
         
-        let filtrados = filtroActual === 'pendientes' ? datosLocales.filter(r => !r["OFA Salida"] || r["OFA Salida"] === 'Pendiente') : datosLocales;
+        let filtrados = filtroActual === 'pendientes' 
+            ? datosLocales.filter(r => !r["OFA Salida"] || r["OFA Salida"] === 'Pendiente') 
+            : datosLocales;
+
         const grupos = filtrados.reduce((acc, obj) => {
             const key = obj["OFA Entrada"] || "ORIGEN NO DEFINIDO";
             if (!acc[key]) acc[key] = [];
             acc[key].push(obj);
             return acc;
         }, {});
+
+        // Filtrar plantillas según tipo
+        const plantillasSolicitud = plantillasDinamicas.filter(p => p.tipo === 'solicitud');
+        const plantillasRespuesta = plantillasDinamicas.filter(p => p.tipo === 'respuesta');
 
         for (const [entrada, folios] of Object.entries(grupos)) {
             const atendidos = folios.filter(f => f["OFA Salida"] && f["OFA Salida"] !== 'Pendiente').length;
@@ -323,7 +352,7 @@
                     <div class="group-label"><i class="fas fa-folder-open"></i> ENTRADA: ${entrada}</div>
                     <span style="font-size:0.7rem; color:${colorP}; font-weight:bold">${atendidos}/${folios.length} PROCESADOS</span>
                 </div>
-                <div class="progress-container"><div class="progress-fill" style="width:${porc}%; background:${colorP}"></div></div>
+                <div class="progress-container"><div class="progress-fill" style="width:${porc}\%; background:${colorP}"></div></div>
                 <div class="grid-layout">
                     ${folios.map(r => {
                         const isDone = r["OFA Salida"] && r["OFA Salida"] !== 'Pendiente';
@@ -331,7 +360,7 @@
                         const fechaRes = historialDescargas[`${r.id}_respuesta`] || "Nunca descargado";
 
                         return `
-                        <div class="tech-card ${isDone ? 'completed' : 'pending'}" id="card-${r.id}" data-index="${(r.dirigido_a + r.dep_dirigi + r.csf_salida).toLowerCase()}" onclick="seleccionarFolio('${r.id}')">
+                        <div class="tech-card ${isDone ? 'completed' : 'pending'}" id="card-${r.id}" data-index="${((r.dirigido_a||'') + (r.dep_dirigi||'') + (r.csf_salida||'')).toLowerCase()}" onclick="seleccionarFolio('${r.id}')">
                             
                             <div style="display:flex; justify-content:space-between; align-items:center">
                                 <span class="data-label" style="color:var(--accent); font-weight:bold">FOLIO: CSF/${r.csf_salida}/2026</span>
@@ -376,14 +405,20 @@
                             <div>
                                 <span class="data-label">Plantilla Solicitud</span>
                                 <select class="template-select" id="select-sol-${r.id}" onclick="event.stopPropagation()">
-                                    ${plantillasBase.solicitud.map((p, idx) => `<option value="${p.url}">Plantilla ${idx+1}: ${p.nombre}</option>`).join('')}
+                                    ${plantillasSolicitud.length > 0 
+                                        ? plantillasSolicitud.map((p, idx) => `<option value="${p.url}">Plantilla ${idx+1}:${p.nombre}</option>`).join('')
+                                        : '<option value="https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx">Plantilla Base Solicitud</option>'
+                                    }
                                 </select>
                             </div>
 
                             <div>
                                 <span class="data-label">Plantilla Respuesta</span>
                                 <select class="template-select" id="select-res-${r.id}" onclick="event.stopPropagation()">
-                                    ${plantillasBase.respuesta.map((p, idx) => `<option value="${p.url}">Plantilla ${idx+1}: ${p.nombre}</option>`).join('')}
+                                    ${plantillasRespuesta.length > 0
+                                        ? plantillasRespuesta.map((p, idx) => `<option value="${p.url}">Plantilla ${idx+1}:${p.nombre}</option>`).join('')
+                                        : '<option value="https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx">Plantilla Base Respuesta</option>'
+                                    }
                                 </select>
                             </div>
 
@@ -402,50 +437,58 @@
         }
     }
 
-    // Función para renderizar la Vista Previa Individual por Folio
+    // Renderizado corregido para la Vista Previa Individual
     function seleccionarFolio(id) {
         document.querySelectorAll('.tech-card').forEach(c => c.classList.remove('selected'));
         const tarjeta = document.getElementById(`card-${id}`);
-        if(tarjeta) tarjeta.classList.add('selected');
+        if (tarjeta) tarjeta.classList.add('selected');
 
         folioSeleccionado = datosLocales.find(r => r.id == id);
-        if(!folioSeleccionado) return;
+        if (!folioSeleccionado) return;
 
-        document.getElementById('preview-folio-tag').innerText = `CSF/${folioSeleccionado.csf_salida}/2026`;
+        const tagFolio = document.getElementById('preview-folio-tag');
+        if (tagFolio) tagFolio.innerText = `CSF/${folioSeleccionado.csf_salida}/2026`;
 
-        const previewHTML = `
+        const previewContainer = document.getElementById('preview-body');
+        if (!previewContainer) return;
+
+        const oficio = folioSeleccionado.oficio_emisor || 'S/N';
+        const fechaFormat = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+        const dirigido = folioSeleccionado.dirigido_a || '---';
+        const dependencia = folioSeleccionado.dep_dirigi || '';
+        const firmante = folioSeleccionado.firmante || '---';
+        const asunto = folioSeleccionado.asunto || 'Sin asunto registrado.';
+
+        previewContainer.innerHTML = `
             <div style="text-align:right; font-size:0.7rem; color:#6b7280; border-bottom:1px solid #e5e7eb; padding-bottom:8px; margin-bottom:12px;">
-                <strong>OFICIO:</strong> ${folioSeleccionado.oficio_emisor || 'S/N'}<br>
-                <strong>FECHA:</strong> ${new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                <strong>OFICIO:</strong> ${oficio}<br>
+                <strong>FECHA:</strong> ${fechaFormat}
             </div>
             
             <div style="margin-bottom:12px;">
-                <strong>PARA:</strong> ${folioSeleccionado.dirigido_a || '---'}<br>
-                <span style="font-size:0.75rem; color:#4b5563;">${folioSeleccionado.dep_dirigi || ''}</span>
+                <strong>PARA:</strong> ${dirigido}<br>
+                <span style="font-size:0.75rem; color:#4b5563;">${dependencia}</span>
             </div>
 
             <div style="margin-bottom:15px; font-size:0.75rem;">
-                <strong>FIRMANTE:</strong> ${folioSeleccionado.firmante || '---'}
+                <strong>FIRMANTE:</strong> ${firmante}
             </div>
 
             <div style="background:#f3f4f6; padding:10px; border-radius:6px; font-size:0.75rem; margin-bottom:15px;">
-                <strong>ASUNTO:</strong> ${folioSeleccionado.asunto || 'Sin asunto registrado.'}
+                <strong>ASUNTO:</strong> ${asunto}
             </div>
 
-            <div style="border-top:1px dashed #d1d5db; pt-10px; font-size:0.7rem; color:#6b7280; margin-top:20px;">
-                <em>* Vista previa simplificada. El formato final de encabezados, logos y diseño se aplicará según la plantilla `.docx` seleccionada.</em>
+            <div style="border-top:1px dashed #d1d5db; padding-top:10px; font-size:0.7rem; color:#6b7280; margin-top:20px;">
+                <em>* Vista previa simplificada. El diseño e imágenes finales se aplicarán conforme a la plantilla `.docx` seleccionada.</em>
             </div>
         `;
-
-        document.getElementById('preview-body').innerHTML = previewHTML;
     }
 
     async function down(id, tipo) {
         mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
         try {
-            const { data: r } = await _supabase.from('ofassalida').select('*').eq('id', id).single();
+            const { data: r } = await client.from('ofassalida').select('*').eq('id', id).single();
             
-            // Obtener la URL del selector de plantilla activo
             const selectId = tipo === 'solicitud' ? `select-sol-${id}` : `select-res-${id}`;
             const selectElem = document.getElementById(selectId);
             let url = selectElem ? selectElem.value : null;
@@ -470,60 +513,7 @@
             });
             
             doc.render();
-            saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_${r.csf_salida}.docx`);
-            
-            historialDescargas[`${id}_${tipo}`] = fechaActual;
-            const elementId = `date-${id}-${tipo === 'solicitud' ? 'sol' : 'res'}`;
-            if(document.getElementById(elementId)) document.getElementById(elementId).innerText = fechaActual;
-
-            mostrarNotificacion('DESCARGA EXITOSA', `Documento generado el ${fechaActual}`);
-        } catch(e) { 
-            console.error(e);
-            mostrarNotificacion('ERROR', 'No se pudo obtener la plantilla del servidor.'); 
-        }
-    }
-
-    // Funciones de control de Modal para sustituir plantilla cuando el cupo está lleno (3/3)
-    function abrirModalSustituirPlantilla(tipo) {
-        const contenedor = document.getElementById('listaPlantillasSustituir');
-        const plantillas = plantillasBase[tipo];
-
-        contenedor.innerHTML = plantillas.map(p => `
-            <label style="display:flex; align-items:center; gap:10px; font-size:0.8rem; background:rgba(0,0,0,0.2); padding:8px; border-radius:8px;">
-                <input type="radio" name="plantillaSustituir" value="${p.id}">
-                ${p.nombre}
-            </label>
-        `).join('');
-
-        document.getElementById('modalPlantilla').classList.add('active');
-    }
-
-    function cerrarModalPlantilla() {
-        document.getElementById('modalPlantilla').classList.remove('active');
-    }
-
-    function confirmarSustitucion() {
-        mostrarNotificacion('PLANTILLA ACTUALIZADA', 'La plantilla seleccionada ha sido sustituida con éxito.');
-        cerrarModalPlantilla();
-    }
-    
-    function exportarExcel() {
-        const dataExcel = datosLocales.map(r => ({
-            "Folio Interno": `CSF/${r.csf_salida}/2026`,
-            "E-OFA": r["OFA Entrada"] || "---",
-            "S-OFA": r["OFA Salida"] || "Pendiente",
-            "Destinatario": r.dirigido_a || "---",
-            "Firmante": r.firmante || "---"
-        }));
-        const ws = XLSX.utils.json_to_sheet(dataExcel);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Correspondencia_2026");
-        XLSX.writeFile(wb, "REPORTE_CORRES_PRO_2026.xlsx");
-        mostrarNotificacion('REPORTE EXCEL', 'El archivo se ha generado con éxito.');
-    }
-
-    init();
-</script>
+            saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()
 
 <footer style="text-align: center; padding: 40px; font-size: 0.7rem; color: var(--dim); border-top: 1px solid var(--border); margin-top: 20px;">
     <p>Desarrollado por <strong>🐤YEPRI-INN</strong> | Dashboard CORRES PRO | &copy; 2026</p>
