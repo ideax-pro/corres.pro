@@ -478,48 +478,60 @@
         `;
     };
 
-    window.down = async function(id, tipo) {
-        mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
-        try {
-            const { data: r } = await client.from('ofassalida').select('*').eq('id', id).single();
-            
-            const selectId = tipo === 'solicitud' ? `select-sol-${id}` : `select-res-${id}`;
-            const selectElem = document.getElementById(selectId);
-            let url = selectElem ? selectElem.value : null;
+   window.down = async function(id, tipo) {
+    mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
+    try {
+        const { data: r, error: dbErr } = await client.from('ofassalida').select('*').eq('id', id).single();
+        if (dbErr) throw new Error("No se pudieron obtener los datos de la base de datos.");
 
-            if (!url) {
-                url = tipo === 'solicitud' 
-                    ? "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx" 
-                    : "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx";
-            }
-            
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-            
-            const buf = await res.arrayBuffer();
-            const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
-            
-            const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-            
-            doc.setData({
-                ...r, 
-                fecha: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-            });
-            
-            doc.render();
-            saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_CSF_${r.csf_salida}.docx`);
+        const selectId = tipo === 'solicitud' ? `select-sol-${id}` : `select-res-${id}`;
+        const selectElem = document.getElementById(selectId);
+        let url = selectElem ? selectElem.value : null;
 
-            historialDescargas[`${id}_${tipo}`] = fechaActual;
-            const elemDate = document.getElementById(tipo === 'solicitud' ? `date-${id}-sol` : `date-${id}-res`);
-            if (elemDate) elemDate.innerText = fechaActual;
-
-            mostrarNotificacion('ÉXITO', 'Documento descargado correctamente.');
-        } catch (err) {
-            console.error(err);
-            mostrarNotificacion('ERROR', 'Ocurrió un error al generar el documento.');
+        if (!url) {
+            url = tipo === 'solicitud' 
+                ? "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx" 
+                : "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx";
         }
-    };
 
+        // Descarga del archivo
+        const res = await fetch(url);
+
+        // Validación de la respuesta HTTP
+        if (!res.ok) {
+            throw new Error(`Error HTTP ${res.status}: La plantilla no fue encontrada o el acceso fue denegado.`);
+        }
+
+        const buf = await res.arrayBuffer();
+
+        // Verificación del encabezado ZIP ("PK" -> Bytes 0x50, 0x4B)
+        const uint8 = new Uint8Array(buf.slice(0, 4));
+        if (uint8[0] !== 0x50 || uint8[1] !== 0x4B) {
+            throw new Error("El archivo descargado no es un documento .docx válido (posible error 404 o permiso denegado en Supabase Storage).");
+        }
+
+        const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
+        
+        const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        
+        doc.setData({
+            ...r, 
+            fecha: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+        });
+        
+        doc.render();
+        saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_CSF_${r.csf_salida || id}.docx`);
+
+        historialDescargas[`${id}_${tipo}`] = fechaActual;
+        const elemDate = document.getElementById(tipo === 'solicitud' ? `date-${id}-sol` : `date-${id}-res`);
+        if (elemDate) elemDate.innerText = fechaActual;
+
+        mostrarNotificacion('ÉXITO', 'Documento descargado correctamente.');
+    } catch (err) {
+        console.error("Detalle del error:", err);
+        mostrarNotificacion('ERROR', err.message || 'Ocurrió un error al generar el documento.');
+    }
+};
     window.exportarExcel = function() {
         if (!datosLocales || datosLocales.length === 0) {
             mostrarNotificacion('AVISO', 'No hay datos para exportar');
