@@ -3,531 +3,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CORRES PRO Intel | Dashboard Final 2026</title>
+    <title>CORRES PRO Intel | Diseñador de Plantillas</title>
     
+    <!-- Supabase y Librerías -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabaseClient.js"></script>
-
-    <script src="https://unpkg.com/pizzip@3.1.4/dist/pizzip.js"></script>
-    <script src="https://unpkg.com/docxtemplater@3.37.2/build/docxtemplater.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         :root {
             --bg: #0b0f1a; --panel: #161e2d; --accent: #00f2fe; --green: #10b981;
             --text: #f8fafc; --dim: #94a3b8; --border: rgba(255,255,255,0.08);
-            --status-pending: #f59e0b; --status-done: #10b981;
-            --bg-card-gradient: linear-gradient(145deg, #161e2d 0%, #1c2539 100%);
+            --bg-card: linear-gradient(145deg, #161e2d 0%, #1c2539 100%);
         }
 
         body {
-            font-family: 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg); color: var(--text); margin: 0; padding: 25px;
-            background-image: radial-gradient(circle at top right, #1e293b, #0b0f1a);
-            min-height: 100vh;
+            font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg);
+            color: var(--text); margin: 0; padding: 20px; min-height: 100vh;
         }
 
         .glass-header {
             display: flex; justify-content: space-between; align-items: center;
             background: rgba(22, 30, 45, 0.7); backdrop-filter: blur(10px);
-            padding: 20px 30px; border-radius: 20px; border: 1px solid var(--border);
-            margin-bottom: 20px; position: sticky; top: 10px; z-index: 100;
-        }
-
-        .search-input {
-            width: 350px; background: rgba(0,0,0,0.2); border: 1px solid var(--border);
-            padding: 10px 15px; border-radius: 12px; color: white; outline: none;
+            padding: 15px 25px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 20px;
         }
 
         .btn-action {
-            background: rgba(255,255,255,0.03); border: 1px solid var(--border);
-            color: white; padding: 8px 14px; border-radius: 8px; cursor: pointer;
-            font-weight: 700; font-size: 0.65rem; transition: 0.3s; text-decoration: none;
-            display: inline-flex; align-items: center; gap: 6px; justify-content: center;
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white;
+            padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 700;
+            font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: 0.3s;
+        }
+        .btn-neon-green { background: var(--green); color: #000; border: none; }
+        .btn-neon-green:hover { box-shadow: 0 0 15px var(--green); transform: translateY(-2px); }
+
+        .editor-container { display: grid; grid-template-columns: 380px 1fr; gap: 20px; }
+
+        .control-panel {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 15px; height: fit-content;
         }
 
-        .btn-neon-green:hover {
-            background: var(--green) !important; color: #000 !important;
-            box-shadow: 0 0 15px var(--green); transform: translateY(-2px);
+        .section-title { font-size: 0.8rem; color: var(--accent); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 0.7rem; color: var(--dim); }
+        .form-group input, .form-group textarea, .form-group select {
+            background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+            color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; outline: none;
         }
 
-        .btn-accent {
-            background: rgba(0, 242, 254, 0.1); border-color: var(--accent); color: var(--accent);
+        .tag-chip {
+            background: rgba(0,242,254,0.1); border: 1px solid var(--accent); color: var(--accent);
+            padding: 4px 8px; border-radius: 6px; font-size: 0.65rem; cursor: pointer; display: inline-block; margin: 2px;
         }
-        .btn-accent:hover {
-            background: var(--accent); color: #000; box-shadow: 0 0 12px var(--accent);
+        .tag-chip:hover { background: var(--accent); color: #000; }
+
+        /* Vista Previa del Documento (A4) */
+        .preview-stage {
+            background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 16px;
+            padding: 30px; display: flex; justify-content: center; overflow-y: auto;
         }
 
-        .score-container { display: flex; gap: 8px; margin: 10px 0; }
-        .score-pill {
-            flex: 1; padding: 6px; border-radius: 8px; font-size: 0.65rem;
-            text-align: center; font-weight: 800; border: 1px solid rgba(255,255,255,0.05);
-        }
-        .score-solicitud { background: rgba(245, 158, 11, 0.1); color: var(--status-pending); border-color: var(--status-pending); }
-        .score-respuesta { background: rgba(16, 185, 129, 0.1); color: var(--status-done); border-color: var(--status-done); }
-        .download-date { font-size: 0.55rem; display: block; margin-top: 4px; color: var(--dim); font-weight: normal; font-family: monospace; }
-
-        .filter-console {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 20px; background: rgba(255, 255, 255, 0.03);
-            padding: 15px 25px; border-radius: 15px; border: 1px solid var(--border);
+        .document-paper {
+            background: #ffffff; color: #000000; width: 100%; max-width: 650px; min-height: 840px;
+            padding: 40px; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; justify-content: space-between; font-family: 'Times New Roman', serif;
         }
 
-        .filter-btn {
-            background: transparent; border: 1px solid var(--border); color: var(--dim);
-            padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.75rem; font-weight: 600;
-        }
-        .filter-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .doc-header-logos { display: flex; justify-content: space-between; align-items: center; min-height: 60px; border-bottom: 2px solid #ccc; padding-bottom: 10px; }
+        .doc-header-logos img { max-height: 50px; max-width: 120px; object-fit: contain; }
 
-        /* Contenedor Principal en Dos Columnas */
-        .dashboard-container {
-            display: grid;
-            grid-template-columns: 1fr 420px;
-            gap: 20px;
-            align-items: start;
-        }
+        .doc-leyenda { font-size: 0.65rem; text-align: center; color: #555; margin: 8px 0 20px 0; font-style: italic; }
 
-        .group-section { background: rgba(255, 255, 255, 0.02); padding: 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 30px; }
-        .group-label { font-size: 0.9rem; font-weight: 700; color: var(--accent); margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        
-        .progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 20px; overflow: hidden; display: flex; }
-        .progress-fill { height: 100%; transition: 0.5s; }
+        .doc-body { flex-grow: 1; font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; }
 
-        .grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
-        
-        .tech-card {
-            background: var(--bg-card-gradient); border-radius: 16px; padding: 18px;
-            border: 1px solid var(--border); position: relative; transition: 0.3s;
-            display: flex; flex-direction: column; gap: 8px; border-left: 4px solid var(--dim);
-            cursor: pointer;
-        }
-        .tech-card:hover { transform: translateY(-3px); border-color: rgba(0, 242, 254, 0.3); }
-        .tech-card.selected { border: 1px solid var(--accent); border-left: 4px solid var(--accent); box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
-        .tech-card.completed { border-left-color: var(--status-done); }
-        .tech-card.pending { border-left-color: var(--status-pending); }
-
-        .ofa-salida-tag { font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; font-weight: bold; }
-        .tag-pending { background: rgba(245, 158, 11, 0.1); color: var(--status-pending); border: 1px solid var(--status-pending); }
-        .tag-done { background: rgba(16, 185, 129, 0.1); color: var(--status-done); border: 1px solid var(--status-done); }
-
-        .data-label { font-size: 0.6rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; }
-        .data-value { font-size: 0.85rem; font-weight: 500; display: block; }
-
-        .template-select {
-            width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
-            color: var(--accent); padding: 6px 10px; border-radius: 8px; font-size: 0.7rem; outline: none; margin-top: 4px;
-        }
-
-        /* Panel de Vista Previa Lateral */
-        .preview-panel {
-            position: sticky; top: 100px;
-            background: var(--panel); border: 1px solid var(--border);
-            border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 15px;
-            min-height: 500px; max-height: calc(100vh - 120px); overflow-y: auto;
-        }
-
-        .preview-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        .preview-content {
-            background: #ffffff; color: #111827; padding: 20px; border-radius: 12px;
-            font-size: 0.8rem; line-height: 1.5; min-height: 350px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        /* Modales */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
-            display: flex; justify-content: center; align-items: center; z-index: 999;
-            opacity: 0; pointer-events: none; transition: 0.3s;
-        }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-card {
-            background: var(--panel); border: 1px solid var(--border); border-radius: 20px;
-            padding: 25px; width: 450px; max-width: 90%; color: white;
-        }
-        
-        #toast-container { position: fixed; top: 25px; right: 25px; z-index: 9999; }
-        .toast {
-            background: rgba(22, 30, 45, 0.95); border-left: 4px solid var(--accent); color: white;
-            padding: 16px 24px; border-radius: 12px; display: flex; align-items: center; gap: 15px;
-            margin-bottom: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px);
-            transform: translateX(120%); transition: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-        .toast.show { transform: translateX(0); }
+        .doc-footer { border-top: 1px solid #ccc; padding-top: 10px; font-size: 0.65rem; text-align: center; color: #555; }
     </style>
 </head>
 <body>
 
-<div id="toast-container"></div>
-
-<div class="modal-overlay" id="modalPlantilla">
-    <div class="modal-card">
-        <h3 style="margin-top:0; color:var(--accent)"><i class="fas fa-file-word"></i> Gestor de Plantillas (Máx. 3)</h3>
-        <p style="font-size:0.75rem; color:var(--dim)">El cupo máximo de plantillas para este tipo está lleno. Selecciona una plantilla para sustituirla por la nueva:</p>
-        
-        <div id="listaPlantillasSustituir" style="display:flex; flex-direction:column; gap:10px; margin: 15px 0;"></div>
-
-        <div style="margin-top:15px;">
-            <label class="data-label">Nueva Plantilla (.docx)</label>
-            <input type="file" id="inputNuevaPlantilla" accept=".docx" style="margin-top:5px; font-size:0.8rem; color:white;">
-        </div>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
-            <button class="btn-action" onclick="cerrarModalPlantilla()">Cancelar</button>
-            <button class="btn-action btn-accent" onclick="confirmarSustitucion()">Sustituir y Guardar</button>
-        </div>
-    </div>
-</div>
-
 <div class="glass-header">
     <div>
-        <h1 style="margin:0; font-size:1.6rem">📄CORRES PRO <span style="font-weight:100">DASHBOARD</span></h1>
-        <p style="margin:0; font-size:0.7rem; color:var(--dim)">SISTEMA DE CONSULTA E HISTORIAL DE DESCARGAS</p>
+        <h1 style="margin:0; font-size:1.4rem">🎨 DESIGNER <span style="font-weight:100">PLANTILLAS</span></h1>
+        <p style="margin:0; font-size:0.65rem; color:var(--dim)">DISEÑO Y PERSONALIZACIÓN DE FORMATOS OFICIALES 2026</p>
     </div>
-    <input type="text" id="mainSearch" class="search-input" placeholder="Buscar por nombre, entidad o folio..." onkeyup="busquedaReal()">
     <div style="display:flex; gap:10px">
-        <a href="generar.html" class="btn-action btn-accent"><i class="fas fa-plus-circle"></i> GENERAR PLANTILLA</a>
-        <a href="menu.html" class="btn-action"><i class="fas fa-th-large"></i> MENÚ</a>
-        <a href="crearcsf.html" class="btn-action"><i class="fas fa-arrow-left"></i> REGRESAR</a>
-        <button onclick="exportarExcel()" class="btn-action" style="background:#1d6f42"><i class="fas fa-file-excel"></i> REPORTE TOTAL</button>
+        <a href="csfcrear.html" class="btn-action"><i class="fas fa-arrow-left"></i> REGRESAR</a>
+        <button onclick="guardarEnSupabase()" class="btn-action btn-neon-green"><i class="fas fa-cloud-upload-alt"></i> GUARDAR EN SUPABASE</button>
     </div>
 </div>
 
-<div class="filter-console">
-    <div style="display: flex; gap: 12px;">
-        <button class="filter-btn active" onclick="filtrarVista('todos', this)">VISTA TOTAL <span id="count-todos">0</span></button>
-        <button class="filter-btn" onclick="filtrarVista('pendientes', this)">PENDIENTES <span id="count-pendientes">0</span></button>
-    </div>
-
-    <div id="mini-stats" style="display: flex; gap: 20px; padding: 0 20px; border-left: 1px solid var(--border);">
-        <div style="text-align: center;">
-            <span style="display: block; font-size: 0.6rem; color: var(--status-pending); font-weight: bold; text-transform: uppercase;">Solicitudes</span>
-            <span id="stat-solicitudes" style="font-size: 1.2rem; font-weight: 800; color: var(--text);">0</span>
-        </div>
-        <div style="text-align: center;">
-            <span style="display: block; font-size: 0.6rem; color: var(--status-done); font-weight: bold; text-transform: uppercase;">Respuestas</span>
-            <span id="stat-respuestas" style="font-size: 1.2rem; font-weight: 800; color: var(--text);">0</span>
-        </div>
-    </div>
-</div>
-
-<div class="dashboard-container">
-    <div id="main-view"></div>
-
-    <div class="preview-panel">
-        <div class="preview-header">
-            <span style="font-size: 0.8rem; font-weight: bold; color: var(--accent);"><i class="fas fa-eye"></i> VISTA PREVIA INDIVIDUAL</span>
-            <span id="preview-folio-tag" style="font-size: 0.7rem; color: var(--dim)">Seleccione un folio</span>
-        </div>
+<div class="editor-container">
+    
+    <!-- PANEL DE CONTROL -->
+    <div class="control-panel">
+        <div class="section-title"><i class="fas fa-sliders-h"></i> Configuración General</div>
         
-        <div id="preview-body" class="preview-content">
-            <p style="color:#6b7280; text-align:center; margin-top:100px;">Selecciona una tarjeta de folio a la izquierda para visualizar la vista previa de la plantilla con los datos del documento.</p>
+        <div class="form-group">
+            <label>Tipo de Documento</label>
+            <select id="tipoDoc" onchange="cargarPlantillaBase()">
+                <option value="solicitud">FORMATO DE SOLICITUD</option>
+                <option value="respuesta">FORMATO DE RESPUESTA</option>
+            </select>
+        </div>
+
+        <div class="section-title"><i class="fas fa-images"></i> Logotipos Institucionales</div>
+        
+        <div class="form-group">
+            <label>Logo Izquierdo (Principal)</label>
+            <input type="file" id="logoIzq" accept="image/*" onchange="previewImagen(this, 'img-izq')">
+        </div>
+        <div class="form-group">
+            <label>Logo Centro (Escudo/Entidad)</label>
+            <input type="file" id="logoCen" accept="image/*" onchange="previewImagen(this, 'img-cen')">
+        </div>
+        <div class="form-group">
+            <label>Logo Derecho (Programa/Secundario)</label>
+            <input type="file" id="logoDer" accept="image/*" onchange="previewImagen(this, 'img-der')">
+        </div>
+
+        <div class="section-title"><i class="fas fa-heading"></i> Encabezado y Pie</div>
+        
+        <div class="form-group">
+            <label>Leyenda Institucional (Encabezado)</label>
+            <input type="text" id="inputLeyenda" value='"2026, Año de la Transformación Digital y la Transparencia"' oninput="actualizarPreview()">
+        </div>
+        <div class="form-group">
+            <label>Texto Pie de Página</label>
+            <input type="text" id="inputPie" value="Dirección de Correspondencia y Gestión Institucional | Edificio Central 2026" oninput="actualizarPreview()">
+        </div>
+
+        <div class="section-title"><i class="fas fa-code"></i> Insertar Variables Dinámicas</div>
+        <div>
+            <span class="tag-chip" onclick="insertarTag('{csf_salida}')">{csf_salida}</span>
+            <span class="tag-chip" onclick="insertarTag('{dirigido_a}')">{dirigido_a}</span>
+            <span class="tag-chip" onclick="insertarTag('{dep_dirigi}')">{dep_dirigi}</span>
+            <span class="tag-chip" onclick="insertarTag('{oficio_emisor}')">{oficio_emisor}</span>
+            <span class="tag-chip" onclick="insertarTag('{OFA Entrada}')">{OFA Entrada}</span>
+            <span class="tag-chip" onclick="insertarTag('{firmante}')">{firmante}</span>
+            <span class="tag-chip" onclick="insertarTag('{asunto}')">{asunto}</span>
+            <span class="tag-chip" onclick="insertarTag('{fecha}')">{fecha}</span>
+        </div>
+
+        <div class="form-group">
+            <label>Cuerpo del Documento</label>
+            <textarea id="cuerpoDoc" rows="12" oninput="actualizarPreview()"></textarea>
         </div>
     </div>
+
+    <!-- VISTA PREVIA -->
+    <div class="preview-stage">
+        <div class="document-paper">
+            <div>
+                <div class="doc-header-logos">
+                    <img id="img-izq" src="" style="display:none;">
+                    <img id="img-cen" src="" style="display:none;">
+                    <img id="img-der" src="" style="display:none;">
+                </div>
+                <div class="doc-leyenda" id="prev-leyenda"></div>
+            </div>
+
+            <div class="doc-body" id="prev-cuerpo"></div>
+
+            <div class="doc-footer" id="prev-pie"></div>
+        </div>
+    </div>
+
 </div>
 
 <script>
-    let datosLocales = [];
-    let filtroActual = 'todos';
-    const historialDescargas = {};
-    let folioSeleccionado = null;
-
-    // Estado local de Plantillas Preestablecidas (hasta 3 por tipo)
-    let plantillasBase = {
-        solicitud: [
-            { id: 1, nombre: 'Plantilla Oficial Solicitud V1', url: 'https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx' },
-            { id: 2, nombre: 'Plantilla Solicitud Alternativa', url: '' },
-            { id: 3, nombre: 'Plantilla Urgente Solicitud', url: '' }
-        ],
-        respuesta: [
-            { id: 10, nombre: 'Plantilla Oficial Respuesta V1', url: 'https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx' },
-            { id: 11, nombre: 'Plantilla Respuesta Ejecutiva', url: '' },
-            { id: 12, nombre: 'Plantilla Respuesta Externa', url: '' }
-        ]
+    const plantillasBase = {
+        solicitud: `FOLIO: CSF/{csf_salida}/2026\nASUNTO: Solicitud de Información / Gestión\nFECHA: {fecha}\n\n{dirigido_a}\n{dep_dirigi}\nPRESENTE.\n\nPor medio del presente conducto, me dirijo a usted de la manera más atenta para hacer de su conocimiento el asunto relativo a: {asunto}.\n\nAsimismo, hago referencia al oficio emisor número {oficio_emisor}, mediante el cual se le da seguimiento oportuno a los trámites correspondientes registrados bajo la entrada {OFA Entrada}.\n\nSin otro particular por el momento, aprovecho la ocasión para enviarle un cordial saludo.\n\n\nATENTAMENTE,\n\n__________________________________\n{firmante}\nCorrespondencia PRO`,
+        respuesta: `FOLIO DE RESPUESTA: CSF/{csf_salida}/2026\nOFICIO DE SALIDA: {OFA Salida}\nFECHA DE EMISIÓN: {fecha}\n\n{dirigido_a}\n{dep_dirigi}\nPRESENTE.\n\nEn atención a su solicitud presentada mediante el oficio emisor {oficio_emisor} referente al expediente {OFA Entrada}, me permito dar respuesta formal a su petición referente a: {asunto}.\n\nSobre el particular, le informo que se han realizado las gestiones necesarias y se da por atendida su solicitud en los términos correspondientes de la normativa vigente.\n\nQuedo a su disposición para cualquier aclaración o duda al respecto.\n\n\nATENTAMENTE,\n\n__________________________________\n{firmante}\nCorrespondencia PRO`
     };
 
-    async function init() {
-        if (typeof _supabase === 'undefined') {
-            console.error("El cliente _supabase no está disponible.");
-            return;
-        }
-
-        const { data, error } = await _supabase.from('ofassalida').select('*');
-        if (error) {
-            console.error("Error al obtener datos:", error);
-            return;
-        }
-        datosLocales = data.sort((a, b) => (b.csf_salida || 0) - (a.csf_salida || 0));
-        actualizarContadores();
-        aplicarRender();
+    function cargarPlantillaBase() {
+        const tipo = document.getElementById('tipoDoc').value;
+        document.getElementById('cuerpoDoc').value = plantillasBase[tipo];
+        actualizarPreview();
     }
 
-    function mostrarNotificacion(titulo, mensaje) {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.innerHTML = `<div><strong>${titulo}</strong><br><small>${mensaje}</small></div>`;
-        container.appendChild(toast);
-        setTimeout(() => toast.classList.add('show'), 100);
-        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 500); }, 3500);
+    function actualizarPreview() {
+        document.getElementById('prev-leyenda').innerText = document.getElementById('inputLeyenda').value;
+        document.getElementById('prev-cuerpo').innerText = document.getElementById('cuerpoDoc').value;
+        document.getElementById('prev-pie').innerText = document.getElementById('inputPie').value;
     }
 
-    function actualizarContadores() {
-        const totalRegistros = datosLocales.length;
-        const pendientes = datosLocales.filter(r => !r["OFA Salida"] || r["OFA Salida"] === 'Pendiente').length;
-        const totalSolicitudes = datosLocales.filter(r => r["OFA Entrada"] && r["OFA Entrada"] !== '---').length;
-        const totalRespuestas = datosLocales.filter(r => r["OFA Salida"] && r["OFA Salida"] !== 'Pendiente' && r["OFA Salida"] !== '').length;
-
-        document.getElementById('count-todos').innerText = totalRegistros;
-        document.getElementById('count-pendientes').innerText = pendientes;
-        document.getElementById('stat-solicitudes').innerText = totalSolicitudes;
-        document.getElementById('stat-respuestas').innerText = totalRespuestas;
+    function insertarTag(tag) {
+        const txtArea = document.getElementById('cuerpoDoc');
+        const start = txtArea.selectionStart;
+        const end = txtArea.selectionEnd;
+        const text = txtArea.value;
+        txtArea.value = text.substring(0, start) + tag + text.substring(end);
+        actualizarPreview();
     }
 
-    function filtrarVista(tipo, btn) {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        filtroActual = tipo;
-        aplicarRender();
-    }
-
-    function busquedaReal() {
-        const q = document.getElementById('mainSearch').value.toLowerCase();
-        document.querySelectorAll('.tech-card').forEach(c => {
-            c.style.display = c.getAttribute('data-index').includes(q) ? 'flex' : 'none';
-        });
-    }
-
-    function aplicarRender() {
-        const view = document.getElementById('main-view');
-        view.innerHTML = '';
-        
-        let filtrados = filtroActual === 'pendientes' ? datosLocales.filter(r => !r["OFA Salida"] || r["OFA Salida"] === 'Pendiente') : datosLocales;
-        const grupos = filtrados.reduce((acc, obj) => {
-            const key = obj["OFA Entrada"] || "ORIGEN NO DEFINIDO";
-            if (!acc[key]) acc[key] = [];
-            acc[key].push(obj);
-            return acc;
-        }, {});
-
-        for (const [entrada, folios] of Object.entries(grupos)) {
-            const atendidos = folios.filter(f => f["OFA Salida"] && f["OFA Salida"] !== 'Pendiente').length;
-            const porc = (atendidos / folios.length) * 100;
-            const colorP = porc === 100 ? 'var(--status-done)' : 'var(--status-pending)';
-
-            const section = document.createElement('div');
-            section.className = 'group-section';
-            section.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center">
-                    <div class="group-label"><i class="fas fa-folder-open"></i> ENTRADA: ${entrada}</div>
-                    <span style="font-size:0.7rem; color:${colorP}; font-weight:bold">${atendidos}/${folios.length} PROCESADOS</span>
-                </div>
-                <div class="progress-container"><div class="progress-fill" style="width:${porc}%; background:${colorP}"></div></div>
-                <div class="grid-layout">
-                    ${folios.map(r => {
-                        const isDone = r["OFA Salida"] && r["OFA Salida"] !== 'Pendiente';
-                        const fechaSol = historialDescargas[`${r.id}_solicitud`] || "Nunca descargado";
-                        const fechaRes = historialDescargas[`${r.id}_respuesta`] || "Nunca descargado";
-
-                        return `
-                        <div class="tech-card ${isDone ? 'completed' : 'pending'}" id="card-${r.id}" data-index="${(r.dirigido_a + r.dep_dirigi + r.csf_salida).toLowerCase()}" onclick="seleccionarFolio('${r.id}')">
-                            
-                            <div style="display:flex; justify-content:space-between; align-items:center">
-                                <span class="data-label" style="color:var(--accent); font-weight:bold">FOLIO: CSF/${r.csf_salida}/2026</span>
-                                <div class="ofa-salida-tag ${isDone ? 'tag-done' : 'tag-pending'}">${r["OFA Salida"] || 'PENDIENTE'}</div>
-                            </div>
-
-                            <div class="score-container">
-                                <div class="score-pill score-solicitud">
-                                    <i class="fas fa-file-invoice"></i> SOLICITUD
-                                    <span class="download-date" id="date-${r.id}-sol">${fechaSol}</span>
-                                </div>
-                                <div class="score-pill score-respuesta">
-                                    <i class="fas fa-reply-all"></i> RESPUESTA
-                                    <span class="download-date" id="date-${r.id}-res">${fechaRes}</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <span class="data-label">Destinatario</span>
-                                <span class="data-value">${r.dirigido_a || '---'}</span>
-                            </div>
-
-                            <div>
-                                <span class="data-label">Entidad / Dependencia</span>
-                                <span class="data-value" style="color:var(--dim)">${r.dep_dirigi || '---'}</span>
-                            </div>
-
-                            <div>
-                                <span class="data-label">Oficio Emisor</span>
-                                <span class="data-value" style="color:var(--accent); font-weight:bold;">${r.oficio_emisor || '---'}</span>
-                            </div>
-
-                            <div>
-                                <span class="data-label">Firmante</span>
-                                <span class="data-value" style="color:var(--accent); font-weight:bold;">${r.firmante || '---'}</span>
-                            </div>
-
-                            <div style="background:rgba(0,0,0,0.2); padding:8px; border-radius:8px; font-size:0.75rem; color:var(--dim); min-height:35px">
-                                ${r.asunto || 'Sin asunto registrado...'}
-                            </div>
-
-                            <div>
-                                <span class="data-label">Plantilla Solicitud</span>
-                                <select class="template-select" id="select-sol-${r.id}" onclick="event.stopPropagation()">
-                                    ${plantillasBase.solicitud.map((p, idx) => `<option value="${p.url}">Plantilla ${idx+1}: ${p.nombre}</option>`).join('')}
-                                </select>
-                            </div>
-
-                            <div>
-                                <span class="data-label">Plantilla Respuesta</span>
-                                <select class="template-select" id="select-res-${r.id}" onclick="event.stopPropagation()">
-                                    ${plantillasBase.respuesta.map((p, idx) => `<option value="${p.url}">Plantilla ${idx+1}: ${p.nombre}</option>`).join('')}
-                                </select>
-                            </div>
-
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px">
-                                <button class="btn-action btn-neon-green" onclick="event.stopPropagation(); down('${r.id}', 'solicitud')">
-                                    <i class="fas fa-download"></i> SOLICITUD
-                                </button>
-                                <button class="btn-action btn-neon-green" onclick="event.stopPropagation(); down('${r.id}', 'respuesta')">
-                                    <i class="fas fa-download"></i> RESPUESTA
-                                </button>
-                            </div>
-                        </div>`;
-                    }).join('')}
-                </div>`;
-            view.appendChild(section);
+    function previewImagen(input, imgId) {
+        const img = document.getElementById(imgId);
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => { img.src = e.target.result; img.style.display = 'block'; };
+            reader.readAsDataURL(input.files[0]);
         }
     }
 
-    // Función para renderizar la Vista Previa Individual por Folio
-    function seleccionarFolio(id) {
-        document.querySelectorAll('.tech-card').forEach(c => c.classList.remove('selected'));
-        const tarjeta = document.getElementById(`card-${id}`);
-        if(tarjeta) tarjeta.classList.add('selected');
-
-        folioSeleccionado = datosLocales.find(r => r.id == id);
-        if(!folioSeleccionado) return;
-
-        document.getElementById('preview-folio-tag').innerText = `CSF/${folioSeleccionado.csf_salida}/2026`;
-
-        const previewHTML = `
-            <div style="text-align:right; font-size:0.7rem; color:#6b7280; border-bottom:1px solid #e5e7eb; padding-bottom:8px; margin-bottom:12px;">
-                <strong>OFICIO:</strong> ${folioSeleccionado.oficio_emisor || 'S/N'}<br>
-                <strong>FECHA:</strong> ${new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-            </div>
-            
-            <div style="margin-bottom:12px;">
-                <strong>PARA:</strong> ${folioSeleccionado.dirigido_a || '---'}<br>
-                <span style="font-size:0.75rem; color:#4b5563;">${folioSeleccionado.dep_dirigi || ''}</span>
-            </div>
-
-            <div style="margin-bottom:15px; font-size:0.75rem;">
-                <strong>FIRMANTE:</strong> ${folioSeleccionado.firmante || '---'}
-            </div>
-
-            <div style="background:#f3f4f6; padding:10px; border-radius:6px; font-size:0.75rem; margin-bottom:15px;">
-                <strong>ASUNTO:</strong> ${folioSeleccionado.asunto || 'Sin asunto registrado.'}
-            </div>
-
-            <div style="border-top:1px dashed #d1d5db; pt-10px; font-size:0.7rem; color:#6b7280; margin-top:20px;">
-                <em>* Vista previa simplificada. El formato final de encabezados, logos y diseño se aplicará según la plantilla `.docx` seleccionada.</em>
-            </div>
-        `;
-
-        document.getElementById('preview-body').innerHTML = previewHTML;
+    async function guardarEnSupabase() {
+        alert("Integración lista para subir el documento procesado a Supabase Storage.");
     }
 
-    async function down(id, tipo) {
-        mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
-        try {
-            const { data: r } = await _supabase.from('ofassalida').select('*').eq('id', id).single();
-            
-            // Obtener la URL del selector de plantilla activo
-            const selectId = tipo === 'solicitud' ? `select-sol-${id}` : `select-res-${id}`;
-            const selectElem = document.getElementById(selectId);
-            let url = selectElem ? selectElem.value : null;
-
-            if (!url) {
-                url = tipo === 'solicitud' 
-                    ? "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx" 
-                    : "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx";
-            }
-            
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-            
-            const buf = await res.arrayBuffer();
-            const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
-            
-            const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-            
-            doc.setData({
-                ...r, 
-                fecha: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-            });
-            
-            doc.render();
-            saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_${r.csf_salida}.docx`);
-            
-            historialDescargas[`${id}_${tipo}`] = fechaActual;
-            const elementId = `date-${id}-${tipo === 'solicitud' ? 'sol' : 'res'}`;
-            if(document.getElementById(elementId)) document.getElementById(elementId).innerText = fechaActual;
-
-            mostrarNotificacion('DESCARGA EXITOSA', `Documento generado el ${fechaActual}`);
-        } catch(e) { 
-            console.error(e);
-            mostrarNotificacion('ERROR', 'No se pudo obtener la plantilla del servidor.'); 
-        }
-    }
-
-    // Funciones de control de Modal para sustituir plantilla cuando el cupo está lleno (3/3)
-    function abrirModalSustituirPlantilla(tipo) {
-        const contenedor = document.getElementById('listaPlantillasSustituir');
-        const plantillas = plantillasBase[tipo];
-
-        contenedor.innerHTML = plantillas.map(p => `
-            <label style="display:flex; align-items:center; gap:10px; font-size:0.8rem; background:rgba(0,0,0,0.2); padding:8px; border-radius:8px;">
-                <input type="radio" name="plantillaSustituir" value="${p.id}">
-                ${p.nombre}
-            </label>
-        `).join('');
-
-        document.getElementById('modalPlantilla').classList.add('active');
-    }
-
-    function cerrarModalPlantilla() {
-        document.getElementById('modalPlantilla').classList.remove('active');
-    }
-
-    function confirmarSustitucion() {
-        mostrarNotificacion('PLANTILLA ACTUALIZADA', 'La plantilla seleccionada ha sido sustituida con éxito.');
-        cerrarModalPlantilla();
-    }
-    
-    function exportarExcel() {
-        const dataExcel = datosLocales.map(r => ({
-            "Folio Interno": `CSF/${r.csf_salida}/2026`,
-            "E-OFA": r["OFA Entrada"] || "---",
-            "S-OFA": r["OFA Salida"] || "Pendiente",
-            "Destinatario": r.dirigido_a || "---",
-            "Firmante": r.firmante || "---"
-        }));
-        const ws = XLSX.utils.json_to_sheet(dataExcel);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Correspondencia_2026");
-        XLSX.writeFile(wb, "REPORTE_CORRES_PRO_2026.xlsx");
-        mostrarNotificacion('REPORTE EXCEL', 'El archivo se ha generado con éxito.');
-    }
-
-    init();
+    // Inicializar
+    cargarPlantillaBase();
 </script>
-
-<footer style="text-align: center; padding: 40px; font-size: 0.7rem; color: var(--dim); border-top: 1px solid var(--border); margin-top: 20px;">
-    <p>Desarrollado por <strong>🐤YEPRI-INN</strong> | Dashboard CORRES PRO | &copy; 2026</p>
-</footer>
 
 </body>
 </html>
