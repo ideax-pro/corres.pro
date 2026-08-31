@@ -9,8 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabaseClient.js"></script>
 
-    <!-- 2. Scripts del sistema y fuentes -->
-    <script src="seguridad.js"></script>
+    <!-- 2. Fuentes -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
 
     <style>
@@ -94,13 +93,22 @@
     let dbEnlaces = [];
     let seleccionada = null;
 
+    // Se detecta de forma flexible si la instancia se llama _supabase o supabase
+    const getSupabaseClient = () => {
+        if (typeof _supabase !== 'undefined') return _supabase;
+        if (typeof supabase !== 'undefined') return supabase;
+        return null;
+    };
+
     window.onload = async () => {
-        if (typeof supabase === 'undefined') {
-            console.error("Supabase no está disponible.");
+        const client = getSupabaseClient();
+        if (!client) {
+            console.error("Cliente de Supabase no inicializado.");
+            alert("Error: No se encontró la conexión con Supabase. Revisa supabaseClient.js");
             return;
         }
 
-        const { data: enlaces } = await supabase.from('direnlaces').select('*');
+        const { data: enlaces } = await client.from('direnlaces').select('*');
         dbEnlaces = enlaces || [];
         await cargarTodo();
         const pendingFolio = sessionStorage.getItem('alimentar_ofa_entrada');
@@ -108,8 +116,9 @@
     };
 
     async function cargarTodo() {
-        const { data: ent } = await supabase.from('registros').select('*').order('consecutivo', { ascending: false });
-        const { data: sal } = await supabase.from('ofassalida').select('"OFA Entrada", "OFA Salida"');
+        const client = getSupabaseClient();
+        const { data: ent } = await client.from('registros').select('*').order('consecutivo', { ascending: false });
+        const { data: sal } = await client.from('ofassalida').select('*');
         masterEntradas = ent || [];
         salidasGlobales = sal || [];
         renderLista(masterEntradas, salidasGlobales);
@@ -118,7 +127,7 @@
     function renderLista(entradas, salidas) {
         const container = document.getElementById('list-container');
         container.innerHTML = entradas.map(r => {
-            const creadas = salidas.filter(s => s["OFA Entrada"] === r.ofa_a).length;
+            const creadas = salidas.filter(s => s["OFA Entrada"] === r.ofa_a || s.ofa_entrada === r.ofa_a).length;
             const programadas = parseInt(r.num_ofa_salida) || 0;
             
             let colorClass = 'status-red';
@@ -156,7 +165,7 @@
         seleccionada = masterEntradas.find(e => e.ofa_a === folio);
         if (!seleccionada) return;
 
-        const yaCreadas = salidasGlobales.filter(s => s["OFA Entrada"] === folio).length;
+        const yaCreadas = salidasGlobales.filter(s => s["OFA Entrada"] === folio || s.ofa_entrada === folio).length;
         const totalPermitidas = parseInt(seleccionada.num_ofa_salida) || 0;
 
         document.querySelectorAll('.entry-item').forEach(i => i.classList.remove('active'));
@@ -175,12 +184,17 @@
             return;
         }
 
-        const { data: ultS } = await supabase.from('ofassalida').select('"OFA Salida"').order('"OFA Salida"', {ascending: false}).limit(1);
+        const client = getSupabaseClient();
+        const { data: ultS } = await client.from('ofassalida').select('*').limit(10);
         let baseNum = 89;
+        
         if(ultS && ultS.length > 0) {
-            const match = ultS[0]["OFA Salida"].match(/\d+/);
-            const numDB = match ? parseInt(match[0]) : 0;
-            baseNum = Math.max(89, numDB + 1);
+            const numeros = ultS.map(s => {
+                const val = s["OFA Salida"] || s.ofa_salida || '';
+                const match = val.match(/\d+/);
+                return match ? parseInt(match[0]) : 0;
+            });
+            baseNum = Math.max(89, Math.max(...numeros) + 1);
         }
 
         const faltantes = totalPermitidas - yaCreadas;
@@ -275,7 +289,8 @@
             "csf_salida": csfValue
         };
 
-        const { error } = await supabase.from('ofassalida').insert([row]);
+        const client = getSupabaseClient();
+        const { error } = await client.from('ofassalida').insert([row]);
         if(!error) {
             alert(`✅ Folio ${folioS} guardado correctamente en ofassalida.`);
             await cargarTodo(); 
