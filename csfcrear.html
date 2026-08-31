@@ -226,6 +226,7 @@
         </div>
     </div>
 </div>
+
 <script>
     // Referencia resiliente al cliente de Supabase
     const client = window._supabase || window.supabaseClient;
@@ -234,9 +235,9 @@
     let filtroActual = 'todos';
     const historialDescargas = {};
     let folioSeleccionado = null;
-
-    // Arreglo global para almacenar las plantillas obtenidas desde Supabase
     let plantillasDinamicas = [];
+
+    window.addEventListener('DOMContentLoaded', init);
 
     async function init() {
         if (!client) {
@@ -244,10 +245,8 @@
             return;
         }
 
-        // 1. Cargar las plantillas registradas en Supabase
         await cargarPlantillasDesdeSupabase();
 
-        // 2. Cargar registros de correspondenica
         const { data, error } = await client.from('ofassalida').select('*');
         if (error) {
             console.error("Error al obtener datos:", error);
@@ -258,7 +257,6 @@
         aplicarRender();
     }
 
-    // Carga las plantillas guardadas previamente en la tabla 'plantillas'
     async function cargarPlantillasDesdeSupabase() {
         try {
             const { data, error } = await client
@@ -270,7 +268,6 @@
             plantillasDinamicas = data || [];
         } catch (err) {
             console.error("Error al cargar plantillas desde Supabase:", err);
-            // Fallback por defecto en caso de no encontrar o fallar la consulta
             plantillasDinamicas = [
                 { id: 1, nombre: 'Plantilla Oficial Solicitud V1', tipo: 'solicitud', url: 'https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx' },
                 { id: 2, nombre: 'Plantilla Oficial Respuesta V1', tipo: 'respuesta', url: 'https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx' }
@@ -306,19 +303,19 @@
         if (elemStatRes) elemStatRes.innerText = totalRespuestas;
     }
 
-    function filtrarVista(tipo, btn) {
+    window.filtrarVista = function(tipo, btn) {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        if (btn) btn.classList.add('active');
         filtroActual = tipo;
         aplicarRender();
-    }
+    };
 
-    function busquedaReal() {
+    window.busquedaReal = function() {
         const q = document.getElementById('mainSearch').value.toLowerCase();
         document.querySelectorAll('.tech-card').forEach(c => {
             c.style.display = c.getAttribute('data-index').includes(q) ? 'flex' : 'none';
         });
-    }
+    };
 
     function aplicarRender() {
         const view = document.getElementById('main-view');
@@ -336,13 +333,12 @@
             return acc;
         }, {});
 
-        // Filtrar plantillas según tipo
         const plantillasSolicitud = plantillasDinamicas.filter(p => p.tipo === 'solicitud');
         const plantillasRespuesta = plantillasDinamicas.filter(p => p.tipo === 'respuesta');
 
         for (const [entrada, folios] of Object.entries(grupos)) {
             const atendidos = folios.filter(f => f["OFA Salida"] && f["OFA Salida"] !== 'Pendiente').length;
-            const porc = (atendidos / folios.length) * 100;
+            const porc = folios.length > 0 ? (atendidos / folios.length) * 100 : 0;
             const colorP = porc === 100 ? 'var(--status-done)' : 'var(--status-pending)';
 
             const section = document.createElement('div');
@@ -352,7 +348,7 @@
                     <div class="group-label"><i class="fas fa-folder-open"></i> ENTRADA: ${entrada}</div>
                     <span style="font-size:0.7rem; color:${colorP}; font-weight:bold">${atendidos}/${folios.length} PROCESADOS</span>
                 </div>
-                <div class="progress-container"><div class="progress-fill" style="width:${porc}\%; background:${colorP}"></div></div>
+                <div class="progress-container"><div class="progress-fill" style="width:${porc}%; background:${colorP}"></div></div>
                 <div class="grid-layout">
                     ${folios.map(r => {
                         const isDone = r["OFA Salida"] && r["OFA Salida"] !== 'Pendiente';
@@ -361,7 +357,6 @@
 
                         return `
                         <div class="tech-card ${isDone ? 'completed' : 'pending'}" id="card-${r.id}" data-index="${((r.dirigido_a||'') + (r.dep_dirigi||'') + (r.csf_salida||'')).toLowerCase()}" onclick="seleccionarFolio('${r.id}')">
-                            
                             <div style="display:flex; justify-content:space-between; align-items:center">
                                 <span class="data-label" style="color:var(--accent); font-weight:bold">FOLIO: CSF/${r.csf_salida}/2026</span>
                                 <div class="ofa-salida-tag ${isDone ? 'tag-done' : 'tag-pending'}">${r["OFA Salida"] || 'PENDIENTE'}</div>
@@ -437,8 +432,7 @@
         }
     }
 
-    // Renderizado corregido para la Vista Previa Individual
-    function seleccionarFolio(id) {
+    window.seleccionarFolio = function(id) {
         document.querySelectorAll('.tech-card').forEach(c => c.classList.remove('selected'));
         const tarjeta = document.getElementById(`card-${id}`);
         if (tarjeta) tarjeta.classList.add('selected');
@@ -479,12 +473,12 @@
             </div>
 
             <div style="border-top:1px dashed #d1d5db; padding-top:10px; font-size:0.7rem; color:#6b7280; margin-top:20px;">
-                <em>* Vista previa simplificada. El diseño e imágenes finales se aplicarán conforme a la plantilla `.docx` seleccionada.</em>
+                <em>* Vista previa simplificada. El diseño e imágenes finales se aplicarán conforme a la plantilla .docx seleccionada.</em>
             </div>
         `;
-    }
+    };
 
-    async function down(id, tipo) {
+    window.down = async function(id, tipo) {
         mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
         try {
             const { data: r } = await client.from('ofassalida').select('*').eq('id', id).single();
@@ -513,7 +507,30 @@
             });
             
             doc.render();
-            saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()
+            saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_CSF_${r.csf_salida}.docx`);
+
+            historialDescargas[`${id}_${tipo}`] = fechaActual;
+            const elemDate = document.getElementById(tipo === 'solicitud' ? `date-${id}-sol` : `date-${id}-res`);
+            if (elemDate) elemDate.innerText = fechaActual;
+
+            mostrarNotificacion('ÉXITO', 'Documento descargado correctamente.');
+        } catch (err) {
+            console.error(err);
+            mostrarNotificacion('ERROR', 'Ocurrió un error al generar el documento.');
+        }
+    };
+
+    window.exportarExcel = function() {
+        if (!datosLocales || datosLocales.length === 0) {
+            mostrarNotificacion('AVISO', 'No hay datos para exportar');
+            return;
+        }
+        const ws = XLSX.utils.json_to_sheet(datosLocales);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+        XLSX.writeFile(wb, "Reporte_CORRES_PRO.xlsx");
+    };
+</script>
 
 <footer style="text-align: center; padding: 40px; font-size: 0.7rem; color: var(--dim); border-top: 1px solid var(--border); margin-top: 20px;">
     <p>Desarrollado por <strong>🐤YEPRI-INN</strong> | Dashboard CORRES PRO | &copy; 2026</p>
