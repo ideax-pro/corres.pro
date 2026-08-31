@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard General - Sistema OFA</title>
 
-    <!-- 1. Librerías de Supabase y tus credenciales -->
+    <!-- 1. Carga de Supabase y credenciales centralizadas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabaseClient.js"></script>
 
-    <!-- 2. Seguridad y demás scripts -->
+    <!-- 2. Scripts del sistema y librerías auxiliares -->
     <script src="seguridad.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         :root { --primary: #1a2a3a; --accent: #4361ee; --success: #2ec4b6; --bg: #f1f5f9; --danger: #ef4444; --warning: #f59e0b; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
@@ -58,7 +59,7 @@
 <body>
 
 <div class="container">
-    <header>
+    <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
         <div class="title-container">
             <div class="search-logo"></div>
             <div>
@@ -104,11 +105,11 @@
     <div class="stats-container">
         <div class="stat-card" style="border-top: 5px solid var(--accent)">
             <h4>Entradas (E-OFA)</h4>
-            <div class="value" id="countE">126</div>
+            <div class="value" id="countE">0</div>
         </div>
         <div class="stat-card" style="border-top: 5px solid var(--success)">
             <h4>Salidas (S-OFA)</h4>
-            <div class="value" id="countS">90</div>
+            <div class="value" id="countS">0</div>
         </div>
         <div style="background:white; border-radius:20px; border:1px solid #eee; padding:15px; display:flex; align-items:center;">
             <canvas id="mainChart" style="max-height: 160px;"></canvas>
@@ -200,43 +201,53 @@
 </div>
 
 <script>
-    const SUPABASE_URL = "https://ltxluqwvspkwnzodgwim.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_5wz8G2GjcNf9f3dzkgR5dw_V1gHycyU";
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
     let dE_Full = [], dS_Full = [];
     let charts = {};
     let folioEditar = "";
     let clicksCriticos = 0;
-    let maxConsecutivoReal = 126; // Base por defecto
+    let maxConsecutivoReal = 0;
 
-    window.onload = async () => { await fetchData(); await fetchAudit(); };
+    window.onload = async () => { 
+        await fetchData(); 
+        await fetchAudit(); 
+    };
 
     async function fetchData() {
-        // Traer registros base
-        const { data: ent } = await _supabase.from('registros').select('*');
-        const { data: sal } = await _supabase.from('ofassalida').select('*');
+        if (typeof supabase === 'undefined') {
+            console.error("Supabase no está definido. Revisa supabaseClient.js.");
+            return;
+        }
+
+        // Consultas a Supabase
+        const { data: ent, error: errEnt } = await supabase.from('registros').select('*');
+        const { data: sal, error: errSal } = await supabase.from('ofassalida').select('*');
         
-        // CORRECCIÓN: Obtener el valor máximo real de la columna consecutivo
-        const { data: maxRes } = await _supabase
+        const { data: maxRes } = await supabase
             .from('registros')
             .select('consecutivo')
             .order('consecutivo', { ascending: false })
             .limit(1);
 
         if (maxRes && maxRes.length > 0) {
-            // Si el último es 125, el tablero debe mostrar ese valor real
             maxConsecutivoReal = maxRes[0].consecutivo;
         }
 
-        dE_Full = ent || []; dS_Full = sal || [];
+        dE_Full = ent || []; 
+        dS_Full = sal || [];
         applyFilters();
     }
 
     async function fetchAudit() {
-        const { data: audit } = await _supabase.from('auditoria_cambios').select('*').order('fecha_movimiento', {ascending: false}).limit(10);
+        if (typeof supabase === 'undefined') return;
+        const { data: audit } = await supabase.from('auditoria_cambios').select('*').order('fecha_movimiento', {ascending: false}).limit(10);
+        
         document.getElementById('auditBody').innerHTML = audit?.map(a => `
-            <tr><td>${a.folio_referencia}</td><td>${new Date(a.fecha_movimiento).toLocaleString()}</td><td>${a.usuario_cambio || 'Admin'}</td><td style="color:#64748b; font-size:9px">Cambio detectado vía Sistema</td></tr>
+            <tr>
+                <td>${a.folio_referencia || 'N/A'}</td>
+                <td>${a.fecha_movimiento ? new Date(a.fecha_movimiento).toLocaleString() : 'N/A'}</td>
+                <td>${a.usuario_cambio || 'Admin'}</td>
+                <td style="color:#64748b; font-size:9px">Cambio detectado vía Sistema</td>
+            </tr>
         `).join('') || '<tr><td colspan="4">Sin historial</td></tr>';
     }
 
@@ -252,10 +263,7 @@
             return matchMonth && matchStatus && matchSearch;
         });
 
-        // Lógica de conteo visual según requerimiento
-        // Entradas: Si no hay filtros, muestra el valor máximo de la DB.
         const cE = (month === 'all' && status === 'all' && search === "") ? maxConsecutivoReal : fE.length;
-        // Salidas: 90 base + registros existentes en la tabla ofassalida
         const cS = dS_Full.length + (month === 'all' ? 90 : 0);
 
         document.getElementById('countE').innerText = cE;
@@ -268,15 +276,25 @@
     function renderTables(e, s) {
         document.getElementById('bodyEntradas').innerHTML = e.map(r => `
             <tr>
-                <td style="font-weight:800; color:var(--accent)">${r.ofa_a}</td>
-                <td>${r.consecutivo}</td><td>${r.folio_csf}</td><td>${r.oficio_emisor}</td>
-                <td>${r.fecha_recepcion}</td><td>${r.ente}</td>
+                <td style="font-weight:800; color:var(--accent)">${r.ofa_a || ''}</td>
+                <td>${r.consecutivo || ''}</td>
+                <td>${r.folio_csf || ''}</td>
+                <td>${r.oficio_emisor || ''}</td>
+                <td>${r.fecha_recepcion || ''}</td>
+                <td>${r.ente || ''}</td>
                 <td><span style="padding:4px 8px; border-radius:6px; background:${r.estatus==='Cerrado'?'#dcfce7':'#fef3c7'}; color:${r.estatus==='Cerrado'?'#166534':'#92400e'}">${r.estatus || 'Recibido'}</span></td>
                 <td><button class="btn" style="padding:6px; background:var(--accent); color:white" onclick="abrirEditor('${r.ofa_a}')">✏️</button></td>
             </tr>`).join('');
 
         document.getElementById('bodySalidas').innerHTML = s.map(r => `
-            <tr><td style="font-weight:800; color:var(--success)">${r["OFA Salida"]}</td><td>${r["OFA Entrada"]}</td><td>${r.oficio_emisor}</td><td>${r.siglas_emisor}</td><td>${r.firmante}</td><td>${r.estatus}</td></tr>
+            <tr>
+                <td style="font-weight:800; color:var(--success)">${r["OFA Salida"] || ''}</td>
+                <td>${r["OFA Entrada"] || ''}</td>
+                <td>${r.oficio_emisor || ''}</td>
+                <td>${r.siglas_emisor || ''}</td>
+                <td>${r.firmante || ''}</td>
+                <td>${r.estatus || ''}</td>
+            </tr>
         `).join('');
     }
 
@@ -317,7 +335,7 @@
     function desbloquearCritico(e) {
         clicksCriticos++;
         if(clicksCriticos === 3) {
-            const conf = confirm("⚠️ ADVERTENCIA CRÍTICA: Está a punto de desbloquear el campo de Salidas (S-OFA). Modificar este valor puede corromper la lógica de los registros vinculados en la base de datos y descuadrar los conteos del sistema. ¿Está plenamente seguro de continuar?");
+            const conf = confirm("⚠️ ADVERTENCIA CRÍTICA: Está a punto de desbloquear el campo de Salidas (S-OFA). Modificar este valor puede corromper la lógica de los registros vinculados en la base de datos. ¿Desea continuar?");
             if(conf) {
                 e.target.classList.remove('readonly-field');
                 e.target.readOnly = false;
@@ -348,7 +366,7 @@
             ultima_mod: new Date().toISOString()
         };
 
-        const { error } = await _supabase.from('registros').update(up).eq('ofa_a', folioEditar);
+        const { error } = await supabase.from('registros').update(up).eq('ofa_a', folioEditar);
         if(!error) {
             alert("✅ Registro actualizado con éxito. Auditoría generada.");
             cerrarModal(); fetchData(); fetchAudit();
@@ -391,6 +409,5 @@
         XLSX.writeFile(wb, `Reporte_OFA_${new Date().toLocaleDateString()}.xlsx`);
     }
 </script>
-   
 </body>
 </html>
