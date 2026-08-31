@@ -9,6 +9,7 @@
     <!-- Librerías Externas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="supabaseClient.js"></script>
 
     <style>
         :root {
@@ -182,9 +183,7 @@
 </div>
 
 <script>
-    const SUPABASE_URL = "https://ltxluqwvspkwnzodgwim.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_5wz8G2GjcNf9f3dzkgR5dw_V1gHycyU";
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     
     let history_data = [];
     let db_direnlaces = [];
