@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CORRES PRO Intel | Dashboard Final 2026</title>
     
-    <!-- 1. Carga de Supabase y cliente centralizado -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabaseClient.js"></script>
 
-    <!-- 2. Librerías externas -->
     <script src="https://unpkg.com/pizzip@3.1.4/dist/pizzip.js"></script>
     <script src="https://unpkg.com/docxtemplater@3.37.2/build/docxtemplater.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -55,6 +53,13 @@
             box-shadow: 0 0 15px var(--green); transform: translateY(-2px);
         }
 
+        .btn-accent {
+            background: rgba(0, 242, 254, 0.1); border-color: var(--accent); color: var(--accent);
+        }
+        .btn-accent:hover {
+            background: var(--accent); color: #000; box-shadow: 0 0 12px var(--accent);
+        }
+
         .score-container { display: flex; gap: 8px; margin: 10px 0; }
         .score-pill {
             flex: 1; padding: 6px; border-radius: 8px; font-size: 0.65rem;
@@ -66,7 +71,7 @@
 
         .filter-console {
             display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 30px; background: rgba(255, 255, 255, 0.03);
+            margin-bottom: 20px; background: rgba(255, 255, 255, 0.03);
             padding: 15px 25px; border-radius: 15px; border: 1px solid var(--border);
         }
 
@@ -76,20 +81,30 @@
         }
         .filter-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
 
-        .group-section { background: rgba(255, 255, 255, 0.02); padding: 25px; border-radius: 24px; border: 1px solid var(--border); margin-bottom: 50px; }
-        .group-label { font-size: 0.9rem; font-weight: 700; color: var(--accent); margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        
-        .progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 25px; overflow: hidden; display: flex; }
-        .progress-fill { height: 100%; transition: 0.5s; }
-
-        .grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }
-        
-        .tech-card {
-            background: var(--bg-card-gradient); border-radius: 20px; padding: 22px;
-            border: 1px solid var(--border); position: relative; transition: 0.4s;
-            display: flex; flex-direction: column; gap: 10px; border-left: 4px solid var(--dim);
+        /* Contenedor Principal en Dos Columnas */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 20px;
+            align-items: start;
         }
 
+        .group-section { background: rgba(255, 255, 255, 0.02); padding: 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 30px; }
+        .group-label { font-size: 0.9rem; font-weight: 700; color: var(--accent); margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        
+        .progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 20px; overflow: hidden; display: flex; }
+        .progress-fill { height: 100%; transition: 0.5s; }
+
+        .grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
+        
+        .tech-card {
+            background: var(--bg-card-gradient); border-radius: 16px; padding: 18px;
+            border: 1px solid var(--border); position: relative; transition: 0.3s;
+            display: flex; flex-direction: column; gap: 8px; border-left: 4px solid var(--dim);
+            cursor: pointer;
+        }
+        .tech-card:hover { transform: translateY(-3px); border-color: rgba(0, 242, 254, 0.3); }
+        .tech-card.selected { border: 1px solid var(--accent); border-left: 4px solid var(--accent); box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
         .tech-card.completed { border-left-color: var(--status-done); }
         .tech-card.pending { border-left-color: var(--status-pending); }
 
@@ -99,6 +114,38 @@
 
         .data-label { font-size: 0.6rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; }
         .data-value { font-size: 0.85rem; font-weight: 500; display: block; }
+
+        .template-select {
+            width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+            color: var(--accent); padding: 6px 10px; border-radius: 8px; font-size: 0.7rem; outline: none; margin-top: 4px;
+        }
+
+        /* Panel de Vista Previa Lateral */
+        .preview-panel {
+            position: sticky; top: 100px;
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 15px;
+            min-height: 500px; max-height: calc(100vh - 120px); overflow-y: auto;
+        }
+
+        .preview-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .preview-content {
+            background: #ffffff; color: #111827; padding: 20px; border-radius: 12px;
+            font-size: 0.8rem; line-height: 1.5; min-height: 350px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* Modales */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+            display: flex; justify-content: center; align-items: center; z-index: 999;
+            opacity: 0; pointer-events: none; transition: 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-card {
+            background: var(--panel); border: 1px solid var(--border); border-radius: 20px;
+            padding: 25px; width: 450px; max-width: 90%; color: white;
+        }
         
         #toast-container { position: fixed; top: 25px; right: 25px; z-index: 9999; }
         .toast {
@@ -114,6 +161,25 @@
 
 <div id="toast-container"></div>
 
+<div class="modal-overlay" id="modalPlantilla">
+    <div class="modal-card">
+        <h3 style="margin-top:0; color:var(--accent)"><i class="fas fa-file-word"></i> Gestor de Plantillas (Máx. 3)</h3>
+        <p style="font-size:0.75rem; color:var(--dim)">El cupo máximo de plantillas para este tipo está lleno. Selecciona una plantilla para sustituirla por la nueva:</p>
+        
+        <div id="listaPlantillasSustituir" style="display:flex; flex-direction:column; gap:10px; margin: 15px 0;"></div>
+
+        <div style="margin-top:15px;">
+            <label class="data-label">Nueva Plantilla (.docx)</label>
+            <input type="file" id="inputNuevaPlantilla" accept=".docx" style="margin-top:5px; font-size:0.8rem; color:white;">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+            <button class="btn-action" onclick="cerrarModalPlantilla()">Cancelar</button>
+            <button class="btn-action btn-accent" onclick="confirmarSustitucion()">Sustituir y Guardar</button>
+        </div>
+    </div>
+</div>
+
 <div class="glass-header">
     <div>
         <h1 style="margin:0; font-size:1.6rem">📄CORRES PRO <span style="font-weight:100">DASHBOARD</span></h1>
@@ -121,6 +187,7 @@
     </div>
     <input type="text" id="mainSearch" class="search-input" placeholder="Buscar por nombre, entidad o folio..." onkeyup="busquedaReal()">
     <div style="display:flex; gap:10px">
+        <a href="generar.html" class="btn-action btn-accent"><i class="fas fa-plus-circle"></i> GENERAR PLANTILLA</a>
         <a href="menu.html" class="btn-action"><i class="fas fa-th-large"></i> MENÚ</a>
         <a href="crearcsf.html" class="btn-action"><i class="fas fa-arrow-left"></i> REGRESAR</a>
         <button onclick="exportarExcel()" class="btn-action" style="background:#1d6f42"><i class="fas fa-file-excel"></i> REPORTE TOTAL</button>
@@ -145,12 +212,40 @@
     </div>
 </div>
 
-<div id="main-view"></div>
+<div class="dashboard-container">
+    <div id="main-view"></div>
+
+    <div class="preview-panel">
+        <div class="preview-header">
+            <span style="font-size: 0.8rem; font-weight: bold; color: var(--accent);"><i class="fas fa-eye"></i> VISTA PREVIA INDIVIDUAL</span>
+            <span id="preview-folio-tag" style="font-size: 0.7rem; color: var(--dim)">Seleccione un folio</span>
+        </div>
+        
+        <div id="preview-body" class="preview-content">
+            <p style="color:#6b7280; text-align:center; margin-top:100px;">Selecciona una tarjeta de folio a la izquierda para visualizar la vista previa de la plantilla con los datos del documento.</p>
+        </div>
+    </div>
+</div>
 
 <script>
     let datosLocales = [];
     let filtroActual = 'todos';
     const historialDescargas = {};
+    let folioSeleccionado = null;
+
+    // Estado local de Plantillas Preestablecidas (hasta 3 por tipo)
+    let plantillasBase = {
+        solicitud: [
+            { id: 1, nombre: 'Plantilla Oficial Solicitud V1', url: 'https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx' },
+            { id: 2, nombre: 'Plantilla Solicitud Alternativa', url: '' },
+            { id: 3, nombre: 'Plantilla Urgente Solicitud', url: '' }
+        ],
+        respuesta: [
+            { id: 10, nombre: 'Plantilla Oficial Respuesta V1', url: 'https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx' },
+            { id: 11, nombre: 'Plantilla Respuesta Ejecutiva', url: '' },
+            { id: 12, nombre: 'Plantilla Respuesta Externa', url: '' }
+        ]
+    };
 
     async function init() {
         if (typeof _supabase === 'undefined') {
@@ -181,7 +276,6 @@
     function actualizarContadores() {
         const totalRegistros = datosLocales.length;
         const pendientes = datosLocales.filter(r => !r["OFA Salida"] || r["OFA Salida"] === 'Pendiente').length;
-        
         const totalSolicitudes = datosLocales.filter(r => r["OFA Entrada"] && r["OFA Entrada"] !== '---').length;
         const totalRespuestas = datosLocales.filter(r => r["OFA Salida"] && r["OFA Salida"] !== 'Pendiente' && r["OFA Salida"] !== '').length;
 
@@ -237,7 +331,7 @@
                         const fechaRes = historialDescargas[`${r.id}_respuesta`] || "Nunca descargado";
 
                         return `
-                        <div class="tech-card ${isDone ? 'completed' : 'pending'}" data-index="${(r.dirigido_a + r.dep_dirigi + r.csf_salida).toLowerCase()}">
+                        <div class="tech-card ${isDone ? 'completed' : 'pending'}" id="card-${r.id}" data-index="${(r.dirigido_a + r.dep_dirigi + r.csf_salida).toLowerCase()}" onclick="seleccionarFolio('${r.id}')">
                             
                             <div style="display:flex; justify-content:space-between; align-items:center">
                                 <span class="data-label" style="color:var(--accent); font-weight:bold">FOLIO: CSF/${r.csf_salida}/2026</span>
@@ -275,15 +369,29 @@
                                 <span class="data-value" style="color:var(--accent); font-weight:bold;">${r.firmante || '---'}</span>
                             </div>
 
-                            <div style="background:rgba(0,0,0,0.2); padding:8px; border-radius:8px; font-size:0.75rem; color:var(--dim); min-height:40px">
+                            <div style="background:rgba(0,0,0,0.2); padding:8px; border-radius:8px; font-size:0.75rem; color:var(--dim); min-height:35px">
                                 ${r.asunto || 'Sin asunto registrado...'}
                             </div>
 
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:5px">
-                                <button class="btn-action btn-neon-green" onclick="down('${r.id}', 'solicitud')">
+                            <div>
+                                <span class="data-label">Plantilla Solicitud</span>
+                                <select class="template-select" id="select-sol-${r.id}" onclick="event.stopPropagation()">
+                                    ${plantillasBase.solicitud.map((p, idx) => `<option value="${p.url}">Plantilla ${idx+1}: ${p.nombre}</option>`).join('')}
+                                </select>
+                            </div>
+
+                            <div>
+                                <span class="data-label">Plantilla Respuesta</span>
+                                <select class="template-select" id="select-res-${r.id}" onclick="event.stopPropagation()">
+                                    ${plantillasBase.respuesta.map((p, idx) => `<option value="${p.url}">Plantilla ${idx+1}: ${p.nombre}</option>`).join('')}
+                                </select>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px">
+                                <button class="btn-action btn-neon-green" onclick="event.stopPropagation(); down('${r.id}', 'solicitud')">
                                     <i class="fas fa-download"></i> SOLICITUD
                                 </button>
-                                <button class="btn-action btn-neon-green" onclick="down('${r.id}', 'respuesta')">
+                                <button class="btn-action btn-neon-green" onclick="event.stopPropagation(); down('${r.id}', 'respuesta')">
                                     <i class="fas fa-download"></i> RESPUESTA
                                 </button>
                             </div>
@@ -294,42 +402,110 @@
         }
     }
 
-  async function down(id, tipo) {
-    mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
-    try {
-        const { data: r } = await _supabase.from('ofassalida').select('*').eq('id', id).single();
-        
-        // URLs corregidas con tu subdominio de Supabase (gwfujkcfpugzgqqrsivg)
-        const url = tipo === 'solicitud' 
-            ? "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx" 
-            : "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx";
-        
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        
-        const buf = await res.arrayBuffer();
-        const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
-        
-        const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        
-        doc.setData({
-            ...r, 
-            fecha: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-        });
-        
-        doc.render();
-        saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_${r.csf_salida}.docx`);
-        
-        historialDescargas[`${id}_${tipo}`] = fechaActual;
-        const elementId = `date-${id}-${tipo === 'solicitud' ? 'sol' : 'res'}`;
-        if(document.getElementById(elementId)) document.getElementById(elementId).innerText = fechaActual;
+    // Función para renderizar la Vista Previa Individual por Folio
+    function seleccionarFolio(id) {
+        document.querySelectorAll('.tech-card').forEach(c => c.classList.remove('selected'));
+        const tarjeta = document.getElementById(`card-${id}`);
+        if(tarjeta) tarjeta.classList.add('selected');
 
-        mostrarNotificacion('DESCARGA EXITOSA', `Documento generado el ${fechaActual}`);
-    } catch(e) { 
-        console.error(e);
-        mostrarNotificacion('ERROR', 'No se pudo obtener la plantilla del servidor.'); 
+        folioSeleccionado = datosLocales.find(r => r.id == id);
+        if(!folioSeleccionado) return;
+
+        document.getElementById('preview-folio-tag').innerText = `CSF/${folioSeleccionado.csf_salida}/2026`;
+
+        const previewHTML = `
+            <div style="text-align:right; font-size:0.7rem; color:#6b7280; border-bottom:1px solid #e5e7eb; padding-bottom:8px; margin-bottom:12px;">
+                <strong>OFICIO:</strong> ${folioSeleccionado.oficio_emisor || 'S/N'}<br>
+                <strong>FECHA:</strong> ${new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </div>
+            
+            <div style="margin-bottom:12px;">
+                <strong>PARA:</strong> ${folioSeleccionado.dirigido_a || '---'}<br>
+                <span style="font-size:0.75rem; color:#4b5563;">${folioSeleccionado.dep_dirigi || ''}</span>
+            </div>
+
+            <div style="margin-bottom:15px; font-size:0.75rem;">
+                <strong>FIRMANTE:</strong> ${folioSeleccionado.firmante || '---'}
+            </div>
+
+            <div style="background:#f3f4f6; padding:10px; border-radius:6px; font-size:0.75rem; margin-bottom:15px;">
+                <strong>ASUNTO:</strong> ${folioSeleccionado.asunto || 'Sin asunto registrado.'}
+            </div>
+
+            <div style="border-top:1px dashed #d1d5db; pt-10px; font-size:0.7rem; color:#6b7280; margin-top:20px;">
+                <em>* Vista previa simplificada. El formato final de encabezados, logos y diseño se aplicará según la plantilla `.docx` seleccionada.</em>
+            </div>
+        `;
+
+        document.getElementById('preview-body').innerHTML = previewHTML;
     }
-}
+
+    async function down(id, tipo) {
+        mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
+        try {
+            const { data: r } = await _supabase.from('ofassalida').select('*').eq('id', id).single();
+            
+            // Obtener la URL del selector de plantilla activo
+            const selectId = tipo === 'solicitud' ? `select-sol-${id}` : `select-res-${id}`;
+            const selectElem = document.getElementById(selectId);
+            let url = selectElem ? selectElem.value : null;
+
+            if (!url) {
+                url = tipo === 'solicitud' 
+                    ? "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx" 
+                    : "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx";
+            }
+            
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            
+            const buf = await res.arrayBuffer();
+            const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
+            
+            const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            
+            doc.setData({
+                ...r, 
+                fecha: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+            });
+            
+            doc.render();
+            saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_${r.csf_salida}.docx`);
+            
+            historialDescargas[`${id}_${tipo}`] = fechaActual;
+            const elementId = `date-${id}-${tipo === 'solicitud' ? 'sol' : 'res'}`;
+            if(document.getElementById(elementId)) document.getElementById(elementId).innerText = fechaActual;
+
+            mostrarNotificacion('DESCARGA EXITOSA', `Documento generado el ${fechaActual}`);
+        } catch(e) { 
+            console.error(e);
+            mostrarNotificacion('ERROR', 'No se pudo obtener la plantilla del servidor.'); 
+        }
+    }
+
+    // Funciones de control de Modal para sustituir plantilla cuando el cupo está lleno (3/3)
+    function abrirModalSustituirPlantilla(tipo) {
+        const contenedor = document.getElementById('listaPlantillasSustituir');
+        const plantillas = plantillasBase[tipo];
+
+        contenedor.innerHTML = plantillas.map(p => `
+            <label style="display:flex; align-items:center; gap:10px; font-size:0.8rem; background:rgba(0,0,0,0.2); padding:8px; border-radius:8px;">
+                <input type="radio" name="plantillaSustituir" value="${p.id}">
+                ${p.nombre}
+            </label>
+        `).join('');
+
+        document.getElementById('modalPlantilla').classList.add('active');
+    }
+
+    function cerrarModalPlantilla() {
+        document.getElementById('modalPlantilla').classList.remove('active');
+    }
+
+    function confirmarSustitucion() {
+        mostrarNotificacion('PLANTILLA ACTUALIZADA', 'La plantilla seleccionada ha sido sustituida con éxito.');
+        cerrarModalPlantilla();
+    }
     
     function exportarExcel() {
         const dataExcel = datosLocales.map(r => ({
