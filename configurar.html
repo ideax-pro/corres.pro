@@ -1,468 +1,233 @@
 <!DOCTYPE html>
-
 <html lang="es">
-
 <head>
-
-    <head>
-    <script src="seguridad.js"></script>
-
     <meta charset="UTF-8">
-    <title>Configurar</title>
-
-    <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control & Configuración - OFAs-CSF</title>
 
-    <title>Panel de Control & Configuración -OFAs-CSF</title>
-
+    <!-- 1. Carga de Supabase y credenciales centralizadas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabaseClient.js"></script>
 
+    <!-- 2. Scripts del sistema y librerías auxiliares -->
+    <script src="seguridad.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Segoe+Print&display=swap" rel="stylesheet">
 
     <style>
-
         :root {
-
             --brand-primary: #00d4ff;
-
             --brand-dark: #000080;
-
             --glass: rgba(255, 255, 255, 0.1);
-
             --glass-border: rgba(255, 255, 255, 0.15);
-
             --text-main: #ffffff;
-
             --success: #2ec4b6;
-
             --danger: #ff4d4d;
-
             --warning: #f59e0b;
-
         }
-
-
 
         body {
-
             margin: 0; padding: 0;
-
             font-family: 'Plus Jakarta Sans', sans-serif;
-
             background: radial-gradient(circle at top right, #1e2a5e, #000033);
-
             min-height: 100vh; color: var(--text-main);
-
             overflow-x: hidden;
-
         }
-
-
 
         .navbar {
-
             width: 100%; height: 70px;
-
             background: rgba(0, 0, 0, 0.3);
-
             backdrop-filter: blur(15px);
-
             display: flex; justify-content: space-between; align-items: center;
-
             padding: 0 40px; box-sizing: border-box;
-
             border-bottom: 1px solid var(--glass-border);
-
             position: sticky; top: 0; z-index: 1000;
-
         }
-
-
 
         .main-container { max-width: 1100px; margin: 30px auto; padding: 0 20px 100px; }
 
-
-
         .card {
-
             background: var(--glass);
-
             backdrop-filter: blur(10px);
-
             border-radius: 24px; border: 1px solid var(--glass-border);
-
             padding: 25px; margin-bottom: 25px;
-
         }
-
-
 
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; }
 
-
-
         .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
-
         .kpi-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; text-align: center; }
-
         .kpi-value { font-size: 1.5rem; font-weight: 800; display: block; }
-
         .kpi-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.6; }
 
-
-
         .table-wrapper { max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 15px; }
-
         table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-
         th { text-align: left; padding: 10px; background: rgba(255,255,255,0.1); font-size: 0.65rem; }
-
         td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-
-
 
         .section-title { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
 
-
-
         .btn-save { 
-
             background: var(--brand-primary); color: var(--brand-dark); 
-
             border: none; padding: 12px 20px; border-radius: 10px; 
-
             font-weight: 800; cursor: pointer; transition: 0.3s;
-
         }
-
         .btn-save:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4); }
-
-
 
         input, select { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 10px; border-radius: 10px; color: white; outline: none; width: 100%; box-sizing: border-box; }
 
-
-
-        .footer-brand { position: fixed; bottom: 0; width: 100%; background: rgba(0,0,0,0.4); padding: 15px 0; text-align: center; font-size: 0.8rem; color: rgba(255,255,255,0.6); }
-
+        .footer-brand { position: fixed; bottom: 0; width: 100%; background: rgba(0,0,0,0.8); padding: 15px 0; text-align: center; font-size: 0.8rem; color: rgba(255,255,255,0.6); }
     </style>
-
 </head>
-
 <body>
 
-
-
     <nav class="navbar">
-
         <div style="font-weight: 800; color: var(--brand-primary);">OFAs-CSF / CONFIGURACIÓN</div>
-
         <button class="btn-save" onclick="location.href='menu.html'">🏠 Volver al Menú</button>
-
     </nav>
-
-
 
     <div class="main-container">
 
-
-
         <div class="dashboard-grid">
-
             <div class="card">
-
                 <div class="section-title"><span>📊</span><h3 style="margin:0">Actividad del Usuario</h3></div>
-
                 <div class="kpi-row">
-
                     <div class="kpi-box"><span class="kpi-value" style="color:var(--success)" id="kpi-reg">0</span><span class="kpi-label">Registros</span></div>
-
                     <div class="kpi-box"><span class="kpi-value" style="color:var(--brand-primary)" id="kpi-mod">0</span><span class="kpi-label">Cambios</span></div>
-
                     <div class="kpi-box"><span class="kpi-value" style="color:var(--danger)" id="kpi-del">0</span><span class="kpi-label">Bajas</span></div>
-
                 </div>
-
                 <canvas id="accessChart" height="180" style="margin-top:20px"></canvas>
-
             </div>
-
-
 
             <div class="card">
-
                 <div class="section-title"><span>🕒</span><h3 style="margin:0">Historial de Accesos</h3></div>
-
                 <div class="table-wrapper">
-
                     <table>
-
                         <thead><tr><th>Usuario</th><th>Fecha/Hora</th><th>Permanencia</th></tr></thead>
-
                         <tbody id="sessionBody"></tbody>
-
                     </table>
-
                 </div>
-
             </div>
-
         </div>
-
-
 
         <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px;">
-
             <div class="card">
-
                 <div class="section-title"><span>🔒</span><h3 style="margin:0">Seguridad de Cuenta</h3></div>
-
                 <div style="display: flex; flex-direction: column; gap: 15px;">
-
                     <div><label>Nuevo Usuario</label><input type="text" id="new-user"></div>
-
                     <div><label>Nueva Contraseña</label><input type="password" id="new-pass" placeholder="Mínimo 8 caracteres"></div>
-
                     <div id="pass-age-info" style="font-size: 0.7rem; color: var(--brand-primary);"></div>
-
                     <button class="btn-save" onclick="updateCredentials()">Actualizar Credenciales (60 días)</button>
-
                 </div>
-
             </div>
-
-
 
             <div class="card">
-
                 <div class="section-title"><span>🔔</span><h3 style="margin:0">Gestor de Alertas</h3></div>
-
                 <div style="display: flex; flex-direction: column; gap: 12px;">
-
                     <label style="display:flex; align-items:center; gap:10px; font-size:0.85rem;">
-
                         <input type="checkbox" id="alert-delete" checked style="width:18px"> Notificar Eliminaciones (Crítico)
-
                     </label>
-
                     <label style="display:flex; align-items:center; gap:10px; font-size:0.85rem;">
-
                         <input type="checkbox" id="alert-edit" style="width:18px"> Notificar Modificaciones
-
                     </label>
-
                     <div style="margin-top:10px">
-
                         <label>Prioridad de Notificación</label>
-
                         <select id="alert-priority" style="margin-top:5px">
-
                             <option value="high">🚨 Emergente (Bloqueo)</option>
-
                             <option value="med">📌 Post-it Automático</option>
-
                             <option value="low" selected>💬 Banner Inferior</option>
-
                         </select>
-
                     </div>
-
                     <button class="btn-save" style="margin-top:10px; background:rgba(255,255,255,0.1); color:white; border:1px solid var(--glass-border)" onclick="saveAlertSettings()">Guardar Preferencias</button>
-
                 </div>
-
             </div>
-
         </div>
-
-
 
     </div>
 
-
-
     <footer class="footer-brand">
-
-        Desarrollado por <strong>YEPRI-INN</strong> | 📄Gestión de datos y correspondencia  | © 2026
-
+        Desarrollado por <strong>YEPRI-INN</strong> | 📄 Gestión de datos y correspondencia oficial | © 2026
     </footer>
 
-
-
     <script>
-
-        const SUPABASE_URL = "https://ltxluqwvspkwnzodgwim.supabase.co";
-
-        const SUPABASE_KEY = "sb_publishable_5wz8G2GjcNf9f3dzkgR5dw_V1gHycyU";
-
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-
-
         let currentUser = "";
 
-
-
         window.onload = async function() {
-
             const hist = JSON.parse(localStorage.getItem('historial_ofas')) || [];
-
             if(hist.length > 0) {
-
                 currentUser = hist[0].nombre;
-
                 document.getElementById('new-user').value = currentUser;
-
                 await loadKPIs();
-
                 await loadSessions();
-
                 checkSecurity();
-
                 loadAlertConfig();
-
             } else { window.location.href = "index.html"; }
-
         };
 
-
-
         async function loadKPIs() {
-
-            const { count } = await _supabase.from('registros').select('*', { count: 'exact', head: true });
-
-            const { data: audit } = await _supabase.from('auditoria_cambios').select('*').eq('usuario_cambio', currentUser);
-
+            if (typeof supabase === 'undefined') return;
+            const { count } = await supabase.from('registros').select('*', { count: 'exact', head: true });
+            const { data: audit } = await supabase.from('auditoria_cambios').select('*').eq('usuario_cambio', currentUser);
+            
             document.getElementById('kpi-reg').innerText = count || 0;
-
             document.getElementById('kpi-mod').innerText = audit?.filter(a => a.tipo_operacion === 'UPDATE').length || 0;
-
             document.getElementById('kpi-del').innerText = audit?.filter(a => a.tipo_operacion === 'DELETE').length || 0;
-
         }
-
-
 
         async function loadSessions() {
-
-            // Datos simulados para historial de acceso
-
             const sessions = [
-
                 { u: currentUser, t: '2026-02-08 08:30', d: '45 min' },
-
                 { u: 'Admin_A', t: '2026-02-08 09:15', d: '1h 20m' },
-
                 { u: currentUser, t: '2026-02-08 11:00', d: 'Activo' }
-
             ];
-
             document.getElementById('sessionBody').innerHTML = sessions.map(s => `<tr><td>${s.u}</td><td>${s.t}</td><td>${s.d}</td></tr>`).join('');
 
-
-
             const ctx = document.getElementById('accessChart').getContext('2d');
-
             new Chart(ctx, {
-
                 type: 'bar',
-
                 data: { labels: ['Tú', 'Admin_A', 'Otros'], datasets: [{ data: [12, 19, 5], backgroundColor: ['#00d4ff', '#2ec4b6', 'rgba(255,255,255,0.1)'], borderRadius: 10 }] },
-
                 options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#fff' } }, x: { ticks: { color: '#fff' } } } }
-
             });
-
         }
-
-
 
         function checkSecurity() {
-
             const lastUpd = localStorage.getItem('last_pass_update') || new Date().toISOString();
-
             const diff = 60 - Math.ceil((new Date() - new Date(lastUpd)) / (1000 * 60 * 60 * 24));
-
             document.getElementById('pass-age-info').innerText = `⚠️ Próxima actualización en: ${diff} días.`;
-
             if(diff <= 0) { alert("BLOQUEO DE SEGURIDAD: Actualice su contraseña."); location.reload(); }
-
         }
-
-
 
         function saveAlertSettings() {
-
             const config = {
-
                 del: document.getElementById('alert-delete').checked,
-
                 edit: document.getElementById('alert-edit').checked,
-
                 pri: document.getElementById('alert-priority').value
-
             };
-
             localStorage.setItem('alert_config_' + currentUser, JSON.stringify(config));
-
             alert("✅ Preferencias de alerta guardadas.");
-
         }
-
-
 
         function loadAlertConfig() {
-
             const config = JSON.parse(localStorage.getItem('alert_config_' + currentUser));
-
             if(config) {
-
                 document.getElementById('alert-delete').checked = config.del;
-
                 document.getElementById('alert-edit').checked = config.edit;
-
                 document.getElementById('alert-priority').value = config.pri;
-
             }
-
         }
-
-
 
         async function updateCredentials() {
-
             const user = document.getElementById('new-user').value;
-
             const pass = document.getElementById('new-pass').value;
-
             if(user && pass.length >= 8) {
-
                 const hist = JSON.parse(localStorage.getItem('historial_ofas')) || [];
-
                 hist[0].nombre = user;
-
                 localStorage.setItem('historial_ofas', JSON.stringify(hist));
-
                 localStorage.setItem('last_pass_update', new Date().toISOString());
-
                 alert("✅ Credenciales actualizadas."); window.location.href = "menu.html";
-
-            } else { alert("Datos inválidos."); }
-
+            } else { alert("Datos inválidos. La contraseña debe tener al menos 8 caracteres."); }
         }
-
     </script>
-<footer style="text-align: center; padding: 20px; font-size: 14px; color: #666; border-top: 1px solid #ddd; margin-top: 40px;">
-    <p>Desarrollado por <strong>YEPRI-INN</strong> | Gestión de datos y correspondencia oficial | &copy; 2026</p>
-</footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./supabaseClient.js"></script>
-    
 </body>
-
 </html>
-
