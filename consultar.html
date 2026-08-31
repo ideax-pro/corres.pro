@@ -10,7 +10,7 @@
     <script src="./supabaseClient.js"></script>
 
     <!-- 2. Scripts del sistema y librerías auxiliares -->
-    <script src="seguridad.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -366,7 +366,7 @@ const { data: maxRes } = await _supabase
             ultima_mod: new Date().toISOString()
         };
 
-        const { error } = await supabase.from('registros').update(up).eq('ofa_a', folioEditar);
+        const { error } = await _supabase.from('registros').update(up).eq('ofa_a', folioEditar);
         if(!error) {
             alert("✅ Registro actualizado con éxito. Auditoría generada.");
             cerrarModal(); fetchData(); fetchAudit();
