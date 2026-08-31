@@ -239,7 +239,7 @@ const { data: maxRes } = await _supabase
 
     async function fetchAudit() {
         if (typeof supabase === 'undefined') return;
-        const { data: audit } = await supabase.from('auditoria_cambios').select('*').order('fecha_movimiento', {ascending: false}).limit(10);
+        const { data: audit } = await _supabase.from('auditoria_cambios').select('*').order('fecha_movimiento', {ascending: false}).limit(10);
         
         document.getElementById('auditBody').innerHTML = audit?.map(a => `
             <tr>
