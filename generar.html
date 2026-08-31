@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Generador de Plantillas Base .docx</title>
+    <!-- Librerías oficiales para empaquetar .docx -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body style="font-family: sans-serif; padding: 40px; text-align: center;">
+
+    <h2>Generador de Plantillas .docx para Supabase</h2>
+    <p>Haz clic en los botones para descargar los archivos con las etiquetas correctas de <code>docxtemplater</code>.</p>
+
+    <button onclick="generarSolicitud()" style="padding: 12px 20px; background: #00f2fe; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+        📄 Descargar CSF-0000-2026-solicitud.docx
+    </button>
+
+    <button onclick="generarRespuesta()" style="padding: 12px 20px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-left: 10px;">
+        📄 Descargar CSF-0000-2026-respuesta.docx
+    </button>
+
+    <script>
+        const { Document, Packer, Paragraph, TextRun, AlignmentType } = window.docx;
+
+        function generarSolicitud() {
+            const doc = new Document({
+                sections: [{
+                    children: [
+                        new Paragraph({ children: [new TextRun({ text: "FOLIO: CSF/{csf_salida}/2026", bold: true, size: 24 })] }),
+                        new Paragraph({ children: [new TextRun({ text: "ASUNTO: Solicitud de Información / Gestión", size: 22 })] }),
+                        new Paragraph({ children: [new TextRun({ text: "FECHA: {fecha}", size: 22 })] }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ children: [new TextRun({ text: "{dirigido_a}", bold: true, size: 24 })] }),
+                        new Paragraph({ children: [new TextRun({ text: "{dep_dirigi}", size: 22 })] }),
+                        new Paragraph({ children: [new TextRun({ text: "PRESENTE.", bold: true, size: 22 })] }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ children: [new TextRun({ text: "Por medio del presente conducto, me dirijo a usted de la manera más atenta para hacer de su conocimiento el asunto relativo a: {asunto}.", size: 22 })] }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ children: [new TextRun({ text: "Asimismo, hago referencia al oficio emisor número {oficio_emisor}, mediante el cual se le da seguimiento oportuno a los trámites correspondientes registrados bajo la entrada {OFA Entrada}.", size: 22 })] }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ children: [new TextRun({ text: "Sin otro particular por el momento, aprovecho la ocasión para enviarle un cordial saludo.", size: 22 })] }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "ATENTAMENTE,", bold: true, size: 22 })] }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "__________________________________", size: 22 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "{firmante}", bold: true, size: 22 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Atención y Correspondencia PRO", size: 20 })] })
+                    ]
+                }]
+            });
+
+            Packer.toBlob(doc).then(blob => {
+                saveAs(blob, "CSF-0000-2026-solicitud.docx");
+            });
+        }
+
+        function generarRespuesta() {
+            const doc = new Document({
+                sections: [{
+                    children: [
+                        new Paragraph({ children: [new TextRun({ text: "FOLIO DE RESPUESTA: CSF/{csf_salida}/2026", bold: true, size: 24 })] }),
+                        new Paragraph({ children: [new TextRun({ text: "OFICIO DE SALIDA: {OFA Salida}", size: 22 })] }),
+                        new Paragraph({ children: [new TextRun({ text: "FECHA DE EMISIÓN: {fecha}", size: 22 })] }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ children: [new TextRun({ text: "{dirigido_a}", bold: true, size: 24 })] }),
+                        new Paragraph({ children: [new TextRun({ text: "{dep_dirigi}", size: 22 })] }),
+                        new Paragraph({ children: [new TextRun({ text: "PRESENTE.", bold: true, size: 22 })] }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ children: [new TextRun({ text: "En atención a su solicitud presentada mediante el oficio emisor {oficio_emisor} referente al expediente {OFA Entrada}, me permito dar respuesta formal a su petición referente a: {asunto}.", size: 22 })] }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ children: [new TextRun({ text: "Sobre el particular, le informo que se han realizado las gestiones necesarias y se da por atendida su solicitud en los términos correspondientes de la normativa vigente.", size: 22 })] }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ children: [new TextRun({ text: "Quedo a su disposición para cualquier aclaración o duda al respecto.", size: 22 })] }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "ATENTAMENTE,", bold: true, size: 22 })] }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "__________________________________", size: 22 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "{firmante}", bold: true, size: 22 })] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Atención y Correspondencia PRO", size: 20 })] })
+                    ]
+                }]
+            });
+
+            Packer.toBlob(doc).then(blob => {
+                saveAs(blob, "CSF-0000-2026-respuesta.docx");
+            });
+        }
+    </script>
+</body>
+</html>
