@@ -3,8 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA OFAS-CSF | Acceso Seguro</title>
+    <title>SISTEMA CORRES PRO OFAS | Acceso Seguro</title>
+
+    <!-- 1. Carga de Supabase y cliente centralizado -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabaseClient.js"></script>
+
+    <!-- 2. Scripts de seguridad y fuentes -->
+    <script src="seguridad.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+
     <style>
         :root {
             --brand-primary: #00d4ff;
@@ -17,7 +25,6 @@
         body {
             margin: 0; padding: 0;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            /* Fondo radial profundo adoptado de configurar.html */
             background: radial-gradient(circle at top right, #1e2a5e, #000033);
             height: 100vh; overflow: hidden;
             display: flex; justify-content: center; align-items: center;
@@ -104,7 +111,7 @@
 
     <div id="login-section" class="card">
         <span style="font-size: 60px; display:block; margin-bottom:15px;">🔐</span>
-        <h2>🗂️OFAs-CSF</h2>
+        <h2>🗂️OFAs-CORRES PRO </h2>
         <p style="opacity:0.6; font-size: 0.9rem; margin-bottom: 30px;">Gestión de Correspondencia Oficial</p>
         
         <div class="input-group">
@@ -246,8 +253,5 @@
         }, 1500);
     </script>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./supabaseClient.js"></script>
-    
 </body>
 </html>
