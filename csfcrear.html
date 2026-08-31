@@ -294,39 +294,43 @@
         }
     }
 
-    async function down(id, tipo) {
-        mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
-        try {
-            const { data: r } = await _supabase.from('ofassalida').select('*').eq('id', id).single();
-            const url = tipo === 'solicitud' 
-                ? "https://ltxluqwvspkwnzodgwim.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx" 
-                : "https://ltxluqwvspkwnzodgwim.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx";
-            
-            const res = await fetch(url);
-            const buf = await res.arrayBuffer();
-            const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
-            
-            const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-            
-            doc.setData({
-                ...r, 
-                fecha: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-            });
-            
-            doc.render();
-            saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_${r.csf_salida}.docx`);
-            
-            historialDescargas[`${id}_${tipo}`] = fechaActual;
-            const elementId = `date-${id}-${tipo === 'solicitud' ? 'sol' : 'res'}`;
-            if(document.getElementById(elementId)) document.getElementById(elementId).innerText = fechaActual;
+  async function down(id, tipo) {
+    mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
+    try {
+        const { data: r } = await _supabase.from('ofassalida').select('*').eq('id', id).single();
+        
+        // URLs corregidas con tu subdominio de Supabase (gwfujkcfpugzgqqrsivg)
+        const url = tipo === 'solicitud' 
+            ? "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx" 
+            : "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx";
+        
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        
+        const buf = await res.arrayBuffer();
+        const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
+        
+        const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        
+        doc.setData({
+            ...r, 
+            fecha: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+        });
+        
+        doc.render();
+        saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_${r.csf_salida}.docx`);
+        
+        historialDescargas[`${id}_${tipo}`] = fechaActual;
+        const elementId = `date-${id}-${tipo === 'solicitud' ? 'sol' : 'res'}`;
+        if(document.getElementById(elementId)) document.getElementById(elementId).innerText = fechaActual;
 
-            mostrarNotificacion('DESCARGA EXITOSA', `Documento generado el ${fechaActual}`);
-        } catch(e) { 
-            console.error(e);
-            mostrarNotificacion('ERROR', 'No se pudo generar el archivo.'); 
-        }
+        mostrarNotificacion('DESCARGA EXITOSA', `Documento generado el ${fechaActual}`);
+    } catch(e) { 
+        console.error(e);
+        mostrarNotificacion('ERROR', 'No se pudo obtener la plantilla del servidor.'); 
     }
-
+}
+    
     function exportarExcel() {
         const dataExcel = datosLocales.map(r => ({
             "Folio Interno": `CSF/${r.csf_salida}/2026`,
