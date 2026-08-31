@@ -244,93 +244,89 @@
     }
 
     // GENERAR DOCX EN MEMORIA Y PROCESAR PROCESO DE SUBIDA
-    async function guardarEnSupabase(idPlantillaAEliminar = null) {
-        const btn = document.getElementById('btnGuardar');
-        const tipo = document.getElementById('tipoDoc').value;
-        const nombre = document.getElementById('nombrePlantilla').value || `Plantilla ${tipo}`;
+   async function guardarEnSupabase(idPlantillaAEliminar = null) {
+    // Referencia al cliente global
+    const client = window._supabase; 
 
-        try {
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> VERIFICANDO...`;
+    const btn = document.getElementById('btnGuardar');
+    const tipo = document.getElementById('tipoDoc').value;
+    const nombre = document.getElementById('nombrePlantilla').value || `Plantilla ${tipo}`;
 
-            // 1. Validar límite de 3 si no venimos de confirmación de reemplazo
-            if (!idPlantillaAEliminar) {
-                const { data: plantillasExistentes, error: errQuery } = await supabaseClient
-                    .from('plantillas')
-                    .select('id, nombre, creado_en')
-                    .eq('tipo', tipo);
+    try {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> VERIFICANDO...`;
 
-                if (errQuery) throw errQuery;
+        // 1. Validar límite de 3
+        if (!idPlantillaAEliminar) {
+            const { data: plantillasExistentes, error: errQuery } = await client
+                .from('plantillas')
+                .select('id, nombre, creado_en')
+                .eq('tipo', tipo);
 
-                if (plantillasExistentes.length >= 3) {
-                    mostrarModalReemplazo(plantillasExistentes);
-                    btn.disabled = false;
-                    btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> GUARDAR EN SUPABASE`;
-                    return;
-                }
+            if (errQuery) throw errQuery;
+
+            if (plantillasExistentes && plantillasExistentes.length >= 3) {
+                mostrarModalReemplazo(plantillasExistentes);
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> GUARDAR EN SUPABASE`;
+                return;
             }
-
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> GENERANDO Y SUBIENDO...`;
-
-            // 2. Construir el documento DOCX plano estructurado
-            const leyenda = document.getElementById('inputLeyenda').value;
-            const cuerpo = document.getElementById('cuerpoDoc').value;
-            const pie = document.getElementById('inputPie').value;
-
-            const contenidoDocumento = `${leyenda}\n\n${cuerpo}\n\n_____________________________________\n${pie}`;
-            const blobDocx = new Blob([contenidoDocumento], { type: "text/plain;charset=utf-8" });
-
-            // 3. Subir archivo a Supabase Storage
-            const fileFileName = `${tipo}_${Date.now()}.txt`;
-            const storagePath = `formatos/${fileFileName}`;
-
-            const { data: uploadData, error: uploadError } = await supabaseClient
-                .storage
-                .from('plantillas')
-                .upload(storagePath, blobDocx, { upsert: true });
-
-            if (uploadError) throw uploadError;
-
-            // Obtener URL Pública
-            const { data: urlData } = supabaseClient
-                .storage
-                .from('plantillas')
-                .getPublicUrl(storagePath);
-
-            const publicUrl = urlData.publicUrl;
-
-            // 4. Si se seleccionó reemplazar una plantilla anterior, eliminarla primero
-            if (idPlantillaAEliminar) {
-                await supabaseClient.from('plantillas').delete().eq('id', idPlantillaAEliminar);
-            }
-
-            // 5. Registrar metadata en la tabla 'plantillas'
-            const { error: insertError } = await supabaseClient
-                .from('plantillas')
-                .insert([
-                    {
-                        nombre: nombre,
-                        tipo: tipo,
-                        url: publicUrl,
-                        storage_path: storagePath,
-                        es_predeterminada: false
-                    }
-                ]);
-
-            if (insertError) throw insertError;
-
-            alert("✅ ¡Plantilla guardada exitosamente en Supabase!");
-            window.location.href = "csfcrear.html";
-
-        } catch (err) {
-            console.error("Error al guardar la plantilla:", err);
-            alert("❌ Ocurrió un error al guardar: " + (err.message || err));
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> GUARDAR EN SUPABASE`;
         }
-    }
 
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> GENERANDO Y SUBIENDO...`;
+
+        // 2. Construir contenido
+        const leyenda = document.getElementById('inputLeyenda').value;
+        const cuerpo = document.getElementById('cuerpoDoc').value;
+        const pie = document.getElementById('inputPie').value;
+        const contenidoDocumento = `${leyenda}\n\n${cuerpo}\n\n_____________________________________\n${pie}`;
+        const blobDocx = new Blob([contenidoDocumento], { type: "text/plain;charset=utf-8" });
+
+        // 3. Subir a Storage
+        const storagePath = `formatos/${tipo}_${Date.now()}.txt`;
+
+        const { error: uploadError } = await client
+            .storage
+            .from('plantillas')
+            .upload(storagePath, blobDocx, { upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        // URL pública
+        const { data: urlData } = client
+            .storage
+            .from('plantillas')
+            .getPublicUrl(storagePath);
+
+        // 4. Si se seleccionó reemplazo, eliminar la previa
+        if (idPlantillaAEliminar) {
+            await client.from('plantillas').delete().eq('id', idPlantillaAEliminar);
+        }
+
+        // 5. Insertar en BD
+        const { error: insertError } = await client
+            .from('plantillas')
+            .insert([{
+                nombre: nombre,
+                tipo: tipo,
+                url: urlData.publicUrl,
+                storage_path: storagePath,
+                es_predeterminada: false
+            }]);
+
+        if (insertError) throw insertError;
+
+        alert("✅ ¡Plantilla guardada exitosamente en Supabase!");
+        window.location.href = "csfcrear.html";
+
+    } catch (err) {
+        console.error("Error al guardar la plantilla:", err);
+        alert("❌ Ocurrió un error al guardar: " + (err.message || err));
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> GUARDAR EN SUPABASE`;
+    }
+}
     // MANEJO DE MODAL DE CUPO DE REEMPLAZO
     function mostrarModalReemplazo(plantillas) {
         const contenedor = document.getElementById('listaPlantillasReemplazo');
