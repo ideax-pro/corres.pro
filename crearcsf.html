@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-
-    <script src="seguridad.js"></script>
-
     <meta charset="UTF-8">
-    <title>Crear CSF</title>
- 
-    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Salidas | OFA-CSF</title>
+
+    <!-- 1. Carga de Supabase y credenciales centralizadas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabaseClient.js"></script>
+
+    <!-- 2. Scripts del sistema y fuentes -->
+    <script src="seguridad.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+
     <style>
         :root {
             --brand: #4361ee; --brand-soft: #eef2ff; --accent: #f72585;
@@ -87,17 +89,18 @@
 </div>
 
 <script>
-    const SUPABASE_URL = "https://ltxluqwvspkwnzodgwim.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_5wz8G2GjcNf9f3dzkgR5dw_V1gHycyU";
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
     let masterEntradas = [];
     let salidasGlobales = [];
     let dbEnlaces = [];
     let seleccionada = null;
 
     window.onload = async () => {
-        const { data: enlaces } = await _supabase.from('direnlaces').select('*');
+        if (typeof supabase === 'undefined') {
+            console.error("Supabase no está disponible.");
+            return;
+        }
+
+        const { data: enlaces } = await supabase.from('direnlaces').select('*');
         dbEnlaces = enlaces || [];
         await cargarTodo();
         const pendingFolio = sessionStorage.getItem('alimentar_ofa_entrada');
@@ -105,8 +108,8 @@
     };
 
     async function cargarTodo() {
-        const { data: ent } = await _supabase.from('registros').select('*').order('consecutivo', { ascending: false });
-        const { data: sal } = await _supabase.from('ofassalida').select('"OFA Entrada", "OFA Salida"');
+        const { data: ent } = await supabase.from('registros').select('*').order('consecutivo', { ascending: false });
+        const { data: sal } = await supabase.from('ofassalida').select('"OFA Entrada", "OFA Salida"');
         masterEntradas = ent || [];
         salidasGlobales = sal || [];
         renderLista(masterEntradas, salidasGlobales);
@@ -134,14 +137,13 @@
             
             const porc = programadas > 0 ? Math.min((creadas / programadas) * 100, 100) : 0;
 
-            // MEJORA 2: Se agrega el CSF-SOLICITUD (folio_csf) a la vista del item
             return `
                 <div class="entry-item ${colorClass}" id="item-${r.ofa_a}" onclick="cargarEspacio('${r.ofa_a}')">
                     <div style="display:flex; justify-content:space-between; align-items:center">
                         <span style="font-weight:800">${r.ofa_a || 'S/F'}</span>
                         <span style="font-size:0.65rem; background:rgba(255,255,255,0.5); padding:2px 6px; border-radius:5px; font-weight:bold">${r.folio_csf || 'SIN CSF'}</span>
                     </div>
-                    <div style="font-size:0.75rem; color:#64748b; margin-top:5px">${r.oficio_emisor} - ${r.asunto}</div>
+                    <div style="font-size:0.75rem; color:#64748b; margin-top:5px">${r.oficio_emisor || ''} - ${r.asunto || ''}</div>
                     <div class="progress-mini-bg">
                         <div class="progress-mini-fill" style="width:${porc}%; background:${barColor}"></div>
                     </div>
@@ -173,7 +175,7 @@
             return;
         }
 
-        const { data: ultS } = await _supabase.from('ofassalida').select('"OFA Salida"').order('"OFA Salida"', {ascending: false}).limit(1);
+        const { data: ultS } = await supabase.from('ofassalida').select('"OFA Salida"').order('"OFA Salida"', {ascending: false}).limit(1);
         let baseNum = 89;
         if(ultS && ultS.length > 0) {
             const match = ultS[0]["OFA Salida"].match(/\d+/);
@@ -192,7 +194,6 @@
 
         for(let i=0; i < faltantes; i++) {
             const folioS = `S-OFA-${(baseNum + i).toString().padStart(4, '0')}`;
-            // MEJORA 1: Campos Default readonly y campo CSF_SALIDA (max 4 char)
             grid.innerHTML += `
                 <div class="mini-form" id="card-${i}">
                     <div class="mini-form-header"><span>FOLIO: ${folioS}</span></div>
@@ -204,7 +205,7 @@
 
                     <div class="field-group">
                         <div class="input-box"><label>Cap. Info</label><input type="text" value="${seleccionada.cap_info || '0'}" readonly></div>
-                      <div class="input-box"><label>Oficio Atiende</label><input type="text" value="${seleccionada.oficio_atiende || '---'}" readonly></div>
+                        <div class="input-box"><label>Oficio Atiende</label><input type="text" value="${seleccionada.oficio_atiende || '---'}" readonly></div>
                     </div>
 
                     <div class="field-group">
@@ -247,49 +248,49 @@
         }
     }
 
-async function guardarCard(idx, folioS, folioPadre) {
-    const card = document.getElementById(`card-${idx}`);
-    const csfValue = card.querySelector('.csf-salida').value;
+    async function guardarCard(idx, folioS, folioPadre) {
+        const card = document.getElementById(`card-${idx}`);
+        const csfValue = card.querySelector('.csf-salida').value;
 
-    if(!card.querySelector('select').value) return alert("Selecciona receptor.");
-    if(!csfValue) return alert("Ingresa el número de CSF Salida.");
+        if(!card.querySelector('select').value) return alert("Selecciona receptor.");
+        if(!csfValue) return alert("Ingresa el número de CSF Salida.");
 
-    const row = {
-        "OFA Entrada": folioPadre, 
-        "OFA Salida": folioS,              
-        "oficio_emisor": seleccionada.oficio_emisor, 
-        "siglas_emisor": seleccionada.siglas_emisor,
-        "entidad_emi": seleccionada.ente, // <--- Columna corregida aquí
-        "firmante": seleccionada.firmante, 
-        "cargo": seleccionada.cargo,
-        "dirigido_a": card.querySelector('.r-enlace').value,
-        "puesto_dirigi": card.querySelector('.r-puesto').value,
-        "dep_dirigi": card.querySelector('.r-ente').value,
-        "estatus": "Atendido", 
-        "fecha_creacion": new Date().toISOString(),
-        "medio": seleccionada.medio,
-        "tipo_dispositivo": seleccionada.tipo_dispositivo,
-        "cap_info": seleccionada.cap_info,
-        "oficio_atende": seleccionada.oficio_atiende, 
-        "csf_salida": csfValue
-    };
+        const row = {
+            "OFA Entrada": folioPadre, 
+            "OFA Salida": folioS,              
+            "oficio_emisor": seleccionada.oficio_emisor, 
+            "siglas_emisor": seleccionada.siglas_emisor,
+            "entidad_emi": seleccionada.ente,
+            "firmante": seleccionada.firmante, 
+            "cargo": seleccionada.cargo,
+            "dirigido_a": card.querySelector('.r-enlace').value,
+            "puesto_dirigi": card.querySelector('.r-puesto').value,
+            "dep_dirigi": card.querySelector('.r-ente').value,
+            "estatus": "Atendido", 
+            "fecha_creacion": new Date().toISOString(),
+            "medio": seleccionada.medio,
+            "tipo_dispositivo": seleccionada.tipo_dispositivo,
+            "cap_info": seleccionada.cap_info,
+            "oficio_atende": seleccionada.oficio_atiende, 
+            "csf_salida": csfValue
+        };
 
-    const { error } = await _supabase.from('ofassalida').insert([row]);
-    if(!error) {
-        alert(`✅ Folio ${folioS} guardado correctamente en ofassalida.`);
-        await cargarTodo(); 
-        cargarEspacio(folioPadre); 
-    } else { 
-        console.error("Error técnico de Supabase:", error);
-        alert("Error al guardar: " + error.message); 
+        const { error } = await supabase.from('ofassalida').insert([row]);
+        if(!error) {
+            alert(`✅ Folio ${folioS} guardado correctamente en ofassalida.`);
+            await cargarTodo(); 
+            cargarEspacio(folioPadre); 
+        } else { 
+            console.error("Error técnico de Supabase:", error);
+            alert("Error al guardar: " + error.message); 
+        }
     }
-}
+
     function buscarEntrada(val) {
         const filt = masterEntradas.filter(e => e.ofa_a?.toLowerCase().includes(val.toLowerCase()) || e.asunto?.toLowerCase().includes(val.toLowerCase()));
         renderLista(filt, salidasGlobales);
     }
 
-    // Lógica de alerta de seguridad para salir
     function confirmarSalidaCSF() {
         const mensaje = "¿Está seguro de salir de la página? \n\nTe recuerdo que los cambios que no hayas guardado se perderán. \n\n¿Quieres ir a Crear CSF o Permanecer en esta página?";
         if (confirm(mensaje)) {
@@ -297,9 +298,5 @@ async function guardarCard(idx, folioS, folioPadre) {
         }
     }
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./supabaseClient.js"></script>
-    
 </body>
 </html>
