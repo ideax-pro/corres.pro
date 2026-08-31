@@ -213,9 +213,17 @@
     };
 
     async function fetchData() {
-        if (typeof supabase === 'undefined') {
-            console.error("Supabase no está definido. Revisa supabaseClient.js.");
-            return;
+       // Reemplaza esto:
+if (typeof supabase === 'undefined') {
+    console.error("Supabase no está definido. Revisa supabaseClient.js.");
+    return;
+}
+
+// Por esto:
+if (typeof _supabase === 'undefined') {
+    console.error("Supabase no está definido. Revisa supabaseClient.js.");
+    return;
+}
         }
 
     // Consultas a Supabase
@@ -237,20 +245,28 @@ const { data: maxRes } = await _supabase
         applyFilters();
     }
 
-    async function fetchAudit() {
-        if (typeof supabase === 'undefined') return;
-        const { data: audit } = await _supabase.from('auditoria_cambios').select('*').order('fecha_movimiento', {ascending: false}).limit(10);
-        
-        document.getElementById('auditBody').innerHTML = audit?.map(a => `
-            <tr>
-                <td>${a.folio_referencia || 'N/A'}</td>
-                <td>${a.fecha_movimiento ? new Date(a.fecha_movimiento).toLocaleString() : 'N/A'}</td>
-                <td>${a.usuario_cambio || 'Admin'}</td>
-                <td style="color:#64748b; font-size:9px">Cambio detectado vía Sistema</td>
-            </tr>
-        `).join('') || '<tr><td colspan="4">Sin historial</td></tr>';
+   async function fetchAudit() {
+    if (typeof _supabase === 'undefined') return;
+
+    const { data: audit, error } = await _supabase
+        .from('auditoria_cambios')
+        .select('*')
+        .order('fecha', { ascending: false });
+
+    if (error) {
+        console.error("Error cargando auditoría:", error.message);
+        return;
     }
 
+    document.getElementById('auditBody').innerHTML = audit?.map(a => `
+        <tr>
+            <td><strong>${a.folio || 'N/A'}</strong></td>
+            <td>${a.fecha ? new Date(a.fecha).toLocaleString() : 'N/A'}</td>
+            <td>${a.usuario || 'Admin'}</td>
+            <td>${a.cambios_realizados || 'Sin detalles'}</td>
+        </tr>
+    `).join('') || '<tr><td colspan="4">Sin historial</td></tr>';
+}
     function applyFilters() {
         const month = document.getElementById('fMonth').value;
         const status = document.getElementById('fStatus').value;
