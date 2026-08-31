@@ -494,20 +494,22 @@
                 : "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx";
         }
 
-        // Descarga del archivo
-        const res = await fetch(url);
+        // Codificación segura de URL para evitar errores por espacios o caracteres especiales
+        const urlSegura = encodeURI(url);
 
-        // Validación de la respuesta HTTP
+        // Petición al servidor
+        const res = await fetch(urlSegura);
+
         if (!res.ok) {
-            throw new Error(`Error HTTP ${res.status}: La plantilla no fue encontrada o el acceso fue denegado.`);
+            throw new Error(`Error HTTP ${res.status}: No se pudo descargar el archivo desde Supabase.`);
         }
 
         const buf = await res.arrayBuffer();
-
-        // Verificación del encabezado ZIP ("PK" -> Bytes 0x50, 0x4B)
         const uint8 = new Uint8Array(buf.slice(0, 4));
+
+        // Verificación de los bytes mágicos de un archivo ZIP/DOCX (0x50, 0x4B -> "PK")
         if (uint8[0] !== 0x50 || uint8[1] !== 0x4B) {
-            throw new Error("El archivo descargado no es un documento .docx válido (posible error 404 o permiso denegado en Supabase Storage).");
+            throw new Error("El archivo devuelto no es un documento .docx válido. Revisa los permisos públicos en Supabase Storage.");
         }
 
         const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
