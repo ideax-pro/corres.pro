@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>METAX | Centro de Operaciones Pro</title>
     
+    <!-- Librerías Externas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -32,6 +33,10 @@
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 10001; justify-content: center; align-items: center; }
         .modal-box { background: #111827; width: 90%; max-width: 850px; max-height: 85vh; padding: 35px; border-radius: 25px; border: 1px solid var(--accent); overflow-y: auto; }
         
+        /* Estilos dinámicos para los modales de edición */
+        .edit-card { display: grid; grid-template-columns: 2fr 1.5fr 1.5fr; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .edit-card span { font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
         /* Estilos Bitácora */
         .table-ui { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 0.75rem; }
         .table-ui th { text-align: left; color: var(--accent); padding: 10px; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: #0b111a; }
@@ -61,8 +66,23 @@
     </div>
 </div>
 
-<div id="modal-c-prev" class="modal-overlay"><div class="modal-box"><h2 style="color:var(--green)">Revisión Final de Carpetas</h2><div id="c-prev-content"></div><button class="btn-main" onclick="generarBAT()">GENERAR .BAT</button><button class="btn-main" style="background:#444; color:white;" onclick="cerrarModal('modal-c-prev')">VOLVER</button></div></div>
-<div id="modal-p-prev" class="modal-overlay"><div class="modal-box"><h2 style="color:var(--green)">Revisión de Nombres PDF</h2><div id="p-prev-content"></div><button class="btn-main" onclick="zipPDFs()">GENERAR .ZIP</button><button class="btn-main" style="background:#444; color:white;" onclick="cerrarModal('modal-p-prev')">VOLVER</button></div></div>
+<div id="modal-c-prev" class="modal-overlay">
+    <div class="modal-box">
+        <h2 style="color:var(--green)">Revisión Final de Carpetas</h2>
+        <div id="c-prev-content"></div>
+        <button class="btn-main" onclick="generarBAT()">GENERAR .BAT</button>
+        <button class="btn-main" style="background:#444; color:white;" onclick="cerrarModal('modal-c-prev')">VOLVER</button>
+    </div>
+</div>
+
+<div id="modal-p-prev" class="modal-overlay">
+    <div class="modal-box">
+        <h2 style="color:var(--green)">Revisión de Nombres PDF</h2>
+        <div id="p-prev-content"></div>
+        <button class="btn-main" onclick="zipPDFs()">GENERAR .ZIP</button>
+        <button class="btn-main" style="background:#444; color:white;" onclick="cerrarModal('modal-p-prev')">VOLVER</button>
+    </div>
+</div>
 
 <div class="grid-util">
     <div class="section-card">
@@ -107,8 +127,27 @@
         </div>
     </div>
 
-    <div class="section-card"><h2><i class="fas fa-folder-tree"></i> 3. CREADOR DE CARPETAS</h2><div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:5px;"><input type="text" id="c_pref" placeholder="Prefijo (CSF/)" oninput="updatePrevC()"><input type="number" id="c_ini" placeholder="Inicio" oninput="updatePrevC()"><input type="number" id="c_fin" placeholder="Fin"></div><div class="preview-box" id="prev_c">Ejemplo estructura...</div><button class="btn-main" onclick="abrirEditorCarpetas()">REVISAR Y GENERAR</button></div>
-    <div class="section-card"><h2><i class="fas fa-file-signature"></i> 4. RENOMBRADOR PDF</h2><div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:5px;"><input type="text" id="p_pref" placeholder="Prefijo (CSF_)" oninput="updatePrevP()"><input type="number" id="p_ini" placeholder="Inicio" oninput="updatePrevP()"></div><div class="preview-box" id="prev_p">Ejemplo archivo...</div><input type="file" id="pdf_in" multiple accept=".pdf"><button class="btn-main" onclick="abrirEditorPDF()">REVISAR Y RENOMBRAR</button></div>
+    <div class="section-card">
+        <h2><i class="fas fa-folder-tree"></i> 3. CREADOR DE CARPETAS</h2>
+        <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:5px;">
+            <input type="text" id="c_pref" placeholder="Prefijo (CSF/)" oninput="updatePrevC()">
+            <input type="number" id="c_ini" placeholder="Inicio" oninput="updatePrevC()">
+            <input type="number" id="c_fin" placeholder="Fin">
+        </div>
+        <div class="preview-box" id="prev_c">Ejemplo estructura...</div>
+        <button class="btn-main" onclick="abrirEditorCarpetas()">REVISAR Y GENERAR</button>
+    </div>
+
+    <div class="section-card">
+        <h2><i class="fas fa-file-signature"></i> 4. RENOMBRADOR PDF</h2>
+        <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:5px;">
+            <input type="text" id="p_pref" placeholder="Prefijo (CSF_)" oninput="updatePrevP()">
+            <input type="number" id="p_ini" placeholder="Inicio" oninput="updatePrevP()">
+        </div>
+        <div class="preview-box" id="prev_p">Ejemplo archivo...</div>
+        <input type="file" id="pdf_in" multiple accept=".pdf">
+        <button class="btn-main" onclick="abrirEditorPDF()">REVISAR Y RENOMBRAR</button>
+    </div>
 </div>
 
 <script>
@@ -123,14 +162,12 @@
 
         listaEnlaces = data || [];
         
-        // Llenar Select
         const combo = document.getElementById('comboSujeto');
         combo.innerHTML = '<option value="">-- Selecciona un Sujeto --</option>';
         listaEnlaces.forEach(e => {
             combo.innerHTML += `<option value="${e.sujeto}">${e.sujeto}</option>`;
         });
         
-        // Reset buscador y render bitácora completa
         document.getElementById('busquedaBitacora').value = '';
         renderizarTabla(listaEnlaces);
     }
@@ -163,7 +200,7 @@
         const e = listaEnlaces.find(item => item.sujeto == sel);
         if(e) {
             document.getElementById('view_ent').value = e.entidad || ''; 
-            document.getElementById('view_enl').value = e.enlace || '';      
+            document.getElementById('view_enl').value = e.enlace || '';        
             document.getElementById('view_pue').value = e.puesto || '';       
         }
     }
@@ -184,55 +221,46 @@
         document.querySelectorAll('#modal-dir input').forEach(i => { i.value = ''; i.readOnly = false; });
         document.getElementById('modal-dir').style.display = 'flex';
     }
-async function guardarRegistroNuevo() {
-    const suj = document.getElementById('dir_suj_new').value.trim();
-    const ent = document.getElementById('dir_ent_new').value.trim();
-    const enl = document.getElementById('dir_enl_new').value.trim();
-    const pue = document.getElementById('dir_pue_new').value.trim();
 
-    if(!suj) return alert("El Sujeto es obligatorio.");
+    async function guardarRegistroNuevo() {
+        const suj = document.getElementById('dir_suj_new').value.trim();
+        const ent = document.getElementById('dir_ent_new').value.trim();
+        const enl = document.getElementById('dir_enl_new').value.trim();
+        const pue = document.getElementById('dir_pue_new').value.trim();
 
-    // Mapeo según tus correcciones: sujeto, entidad, enlace, puesto
-    const payload = { 
-        sujeto: suj, 
-        entidad: ent, 
-        enlace: enl, 
-        puesto: pue 
-    };
+        if(!suj) return alert("El Sujeto es obligatorio.");
 
-    try {
-        let response;
-        if(document.getElementById('dir_suj_new').readOnly) {
-            // MODO EDICIÓN
-            response = await _db.from('direnlaces').update(payload).eq('sujeto', suj);
-        } else {
-            // MODO NUEVO
-            response = await _db.from('direnlaces').insert([payload]);
+        const payload = { 
+            sujeto: suj, 
+            entidad: ent, 
+            enlace: enl, 
+            puesto: pue 
+        };
+
+        try {
+            let response;
+            if(document.getElementById('dir_suj_new').readOnly) {
+                response = await _db.from('direnlaces').update(payload).eq('sujeto', suj);
+            } else {
+                response = await _db.from('direnlaces').insert([payload]);
+            }
+
+            if (response.error) throw new Error(response.error.message);
+            
+            alert("✅ Datos guardados correctamente en la tabla direnlaces.");
+            cerrarModal('modal-dir');
+            
+            document.getElementById('view_ent').value = '';
+            document.getElementById('view_enl').value = '';
+            document.getElementById('view_pue').value = '';
+            
+            await cargarCombo();
+            
+        } catch (error) {
+            console.error("Fallo al guardar:", error);
+            alert("⚠️ ERROR AL GUARDAR: " + error.message);
         }
-
-        // REVISIÓN REAL DE ERRORES
-        if (response.error) {
-            console.error("Error de Supabase:", response.error);
-            // Si hay un error (ej. columna inexistente o RLS), lanzamos alerta
-            throw new Error(response.error.message);
-        }
-        
-        // Si no hubo error, procedemos
-        alert("✅ Datos guardados correctamente en la tabla direnlaces.");
-        cerrarModal('modal-dir');
-        
-        // Limpiar visor principal
-        document.getElementById('view_ent').value = '';
-        document.getElementById('view_enl').value = '';
-        document.getElementById('view_pue').value = '';
-        
-        await cargarCombo(); // Refresca la bitácora
-        
-    } catch (error) {
-        console.error("Fallo al guardar:", error);
-        alert("⚠️ ERROR AL GUARDAR: " + error.message);
     }
-}
 
     async function eliminarSujeto() {
         const sel = document.getElementById('comboSujeto').value;
@@ -247,19 +275,68 @@ async function guardarRegistroNuevo() {
 
     function updatePrevC() { const p = document.getElementById('c_pref').value || "CSF/"; const i = document.getElementById('c_ini').value || "000"; document.getElementById('prev_c').innerText = `Ejemplo: ${p}${i}/2026...`.replace(/\//g, '-'); }
     function updatePrevP() { const p = document.getElementById('p_pref').value || "CSF_"; const i = document.getElementById('p_ini').value || "000"; document.getElementById('prev_p').innerText = `Ejemplo: ${p}${i}/2026.pdf`.replace(/\//g, '-'); }
-    function abrirEditorCarpetas() { const ini = parseInt(document.getElementById('c_ini').value); const fin = parseInt(document.getElementById('c_fin').value); const pref = document.getElementById('c_pref').value; if(isNaN(ini) || isNaN(fin)) return alert("Rango inválido."); let h = ''; for(let i=ini; i<=fin; i++) { const n = `${pref}${i}/2026`.replace(/\//g, '-'); h += `<div class="edit-card"><input type="text" class="r-name" value="${n}"><input type="text" class="s1" value="oficio a notificar"><input type="text" class="s2" value="acervo de evidencias"></div>`; } document.getElementById('c-prev-content').innerHTML = h; document.getElementById('modal-c-prev').style.display = 'flex'; }
-    function generarBAT() { let s = "@echo off\nchcp 65001\n"; document.querySelectorAll('.edit-card').forEach(c => { const r = c.querySelector('.r-name').value; s += `mkdir "${r}"\nmkdir "${r}\\${c.querySelector('.s1').value}"\nmkdir "${r}\\${c.querySelector('.s2').value}"\n`; }); saveAs(new Blob([s], {type: "text/plain"}), "Estructura.bat"); cerrarModal('modal-c-prev'); }
-    function abrirEditorPDF() { const input = document.getElementById('pdf_in'); if(input.files.length === 0) return alert("Sube PDFs."); const pref = document.getElementById('p_pref').value; let start = parseInt(document.getElementById('p_ini').value); let h = ''; Array.from(input.files).forEach((f, i) => { h += `<div class="edit-card" style="grid-template-columns: 1fr 2fr;"><span>${f.name}</span><input type="text" class="pdf-n" id="pdf-n-${i}" value="${pref}${start+i}-2026.pdf"></div>`; }); document.getElementById('p-prev-content').innerHTML = h; document.getElementById('modal-p-prev').style.display = 'flex'; }
-    async function zipPDFs() { const zip = new JSZip(); Array.from(document.getElementById('pdf_in').files).forEach((f, i) => { zip.file(document.getElementById(`pdf-n-${i}`).value.replace(/\//g, '-'), f); }); saveAs(await zip.generateAsync({type: "blob"}), "PDFs.zip"); cerrarModal('modal-p-prev'); }
-    async function backupTotal() { const { data: reg } = await _db.from('registros').select('*'); const { data: ofas } = await _db.from('ofassalida').select('*'); if(!reg || !ofas) return alert("Error."); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reg), "Registros"); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ofas), "Ofassalida"); XLSX.writeFile(wb, "Respaldo.xlsx"); localStorage.setItem('lastB', new Date().getTime()); }
+    
+    function abrirEditorCarpetas() { 
+        const ini = parseInt(document.getElementById('c_ini').value); 
+        const fin = parseInt(document.getElementById('c_fin').value); 
+        const pref = document.getElementById('c_pref').value; 
+        if(isNaN(ini) || isNaN(fin)) return alert("Rango inválido."); 
+        let h = ''; 
+        for(let i=ini; i<=fin; i++) { 
+            const n = `${pref}${i}/2026`.replace(/\//g, '-'); 
+            h += `<div class="edit-card"><input type="text" class="r-name" value="${n}"><input type="text" class="s1" value="oficio a notificar"><input type="text" class="s2" value="acervo de evidencias"></div>`; 
+        } 
+        document.getElementById('c-prev-content').innerHTML = h; 
+        document.getElementById('modal-c-prev').style.display = 'flex'; 
+    }
+
+    function generarBAT() { 
+        let s = "@echo off\nchcp 65001\n"; 
+        document.querySelectorAll('.edit-card').forEach(c => { 
+            const r = c.querySelector('.r-name').value; 
+            s += `mkdir "${r}"\nmkdir "${r}\\${c.querySelector('.s1').value}"\nmkdir "${r}\\${c.querySelector('.s2').value}"\n`; 
+        }); 
+        saveAs(new Blob([s], {type: "text/plain"}), "Estructura.bat"); 
+        cerrarModal('modal-c-prev'); 
+    }
+
+    function abrirEditorPDF() { 
+        const input = document.getElementById('pdf_in'); 
+        if(input.files.length === 0) return alert("Sube PDFs."); 
+        const pref = document.getElementById('p_pref').value; 
+        let start = parseInt(document.getElementById('p_ini').value) || 1; 
+        let h = ''; 
+        Array.from(input.files).forEach((f, i) => { 
+            h += `<div class="edit-card" style="grid-template-columns: 1fr 2fr;"><span>${f.name}</span><input type="text" class="pdf-n" id="pdf-n-${i}" value="${pref}${start+i}-2026.pdf"></div>`; 
+        }); 
+        document.getElementById('p-prev-content').innerHTML = h; 
+        document.getElementById('modal-p-prev').style.display = 'flex'; 
+    }
+
+    async function zipPDFs() { 
+        const zip = new JSZip(); 
+        Array.from(document.getElementById('pdf_in').files).forEach((f, i) => { 
+            zip.file(document.getElementById(`pdf-n-${i}`).value.replace(/\//g, '-'), f); 
+        }); 
+        saveAs(await zip.generateAsync({type: "blob"}), "PDFs.zip"); 
+        cerrarModal('modal-p-prev'); 
+    }
+
+    async function backupTotal() { 
+        const { data: reg } = await _db.from('registros').select('*'); 
+        const { data: ofas } = await _db.from('ofassalida').select('*'); 
+        if(!reg || !ofas) return alert("Error al obtener los datos de la base de datos."); 
+        const wb = XLSX.utils.book_new(); 
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reg), "Registros"); 
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ofas), "Ofassalida"); 
+        XLSX.writeFile(wb, "Respaldo.xlsx"); 
+        localStorage.setItem('lastB', new Date().getTime()); 
+    }
+
     function cerrarModal(id) { document.getElementById(id).style.display = 'none'; }
     
     window.onload = () => { cargarCombo(); };
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./supabaseClient.js"></script>
-    
 </body>
-    
 </html>
