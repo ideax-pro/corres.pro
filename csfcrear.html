@@ -9,8 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabaseClient.js"></script>
 
-    <!-- 2. Scripts de seguridad y librerías externas -->
-    <script src="seguridad.js"></script>
+    <!-- 2. Librerías externas -->
     <script src="https://unpkg.com/pizzip@3.1.4/dist/pizzip.js"></script>
     <script src="https://unpkg.com/docxtemplater@3.37.2/build/docxtemplater.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -154,12 +153,12 @@
     const historialDescargas = {};
 
     async function init() {
-        if (typeof supabase === 'undefined') {
-            console.error("Supabase no está disponible.");
+        if (typeof _supabase === 'undefined') {
+            console.error("El cliente _supabase no está disponible.");
             return;
         }
 
-        const { data, error } = await supabase.from('ofassalida').select('*');
+        const { data, error } = await _supabase.from('ofassalida').select('*');
         if (error) {
             console.error("Error al obtener datos:", error);
             return;
@@ -298,7 +297,7 @@
     async function down(id, tipo) {
         mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
         try {
-            const { data: r } = await supabase.from('ofassalida').select('*').eq('id', id).single();
+            const { data: r } = await _supabase.from('ofassalida').select('*').eq('id', id).single();
             const url = tipo === 'solicitud' 
                 ? "https://ltxluqwvspkwnzodgwim.supabase.co/storage/v1/object/public/Plantilla%20solicitud/CSF-0000-2026-solicitud.docx" 
                 : "https://ltxluqwvspkwnzodgwim.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx";
