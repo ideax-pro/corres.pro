@@ -1,11 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <script src="seguridad.js"></script>
-
     <meta charset="UTF-8">
-    <title>Menu</title>
-   
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Principal | SISTEMA OFAS-CORRES PRO</title>
+
+    <!-- 1. Carga de Supabase y cliente centralizado -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabaseClient.js"></script>
+
+    <!-- 2. Scripts de seguridad y fuentes -->
+    <script src="seguridad.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    
     <style>
         :root {
             --brand-primary: #00d4ff;
@@ -196,12 +203,18 @@
             box-shadow: 0 8px 20px rgba(0, 212, 255, 0.4);
             z-index: 1000; transition: 0.3s;
         }
+
+        footer {
+            text-align: center; padding: 20px; font-size: 13px; color: rgba(255,255,255,0.5);
+            background: rgba(0,0,0,0.2); backdrop-filter: blur(5px);
+            border-top: 1px solid var(--glass-border); z-index: 10;
+        }
     </style>
 </head>
 <body>
 
     <nav class="navbar fade-in-up delay-1">
-        <div class="nav-logo">🗂️OFAs-CSF</div>
+        <div class="nav-logo">🗂️OFAs-CORRES PRO </div>
         <div class="user-menu" onclick="toggleDropdown()">
             <span id="nav-username">Cargando...</span>
             <img src="https://via.placeholder.com/150" alt="Perfil" class="user-avatar" id="avatar-img">
@@ -212,7 +225,7 @@
                 <div style="height:1px; background:#eee; margin: 5px 0;"></div>
                 <a href="javascript:void(0)" onclick="addPostit()">📌 Nuevo Post-it</a>
                 <a href="configurar.html">⚙️ Configuración</a>
-               <a href="javascript:void(0)" onclick="cerrarSesion()" style="color: #c0392b; font-weight: bold;">🚪 Cerrar Sesión</a>
+                <a href="javascript:void(0)" onclick="cerrarSesion()" style="color: #c0392b; font-weight: bold;">🚪 Cerrar Sesión</a>
             </div>
         </div>
     </nav>
@@ -259,6 +272,10 @@
     </div>
 
     <button id="scroll-btn" onclick="handleScroll()" class="fade-in-up delay-6">▲</button>
+
+    <footer>
+        Desarrollado por <strong>🐥YEPRI-INN</strong> | 📄Gestión de datos y correspondencia oficial | &copy; 2026
+    </footer>
 
     <script>
         let notes = [];
@@ -367,13 +384,5 @@
             setTimeout(() => hoja.remove(), 10000);
         }, 2000);
     </script>
-  <footer style="text-align: center; padding: 20px; font-size: 14px; color: #666; border-top: 1px solid #ddd; margin-top: 40px;">
-    <p>Desarrollado por <strong>YEPRI-INN</strong> | Gestión de datos y correspondencia oficial | &copy; 2026</p>
-</footer>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./supabaseClient.js"></script>
-    
 </body>
 </html>
-
