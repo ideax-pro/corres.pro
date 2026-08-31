@@ -212,34 +212,33 @@
         await fetchAudit(); 
     };
 
-    async function fetchData() {
-       // Reemplaza esto:
-if (typeof supabase === 'undefined') {
-    console.error("Supabase no está definido. Revisa supabaseClient.js.");
-    return;
-}
+   async function fetchData() {
+    if (typeof _supabase === 'undefined') {
+        console.error("Supabase no está definido. Revisa supabaseClient.js.");
+        return;
+    }
 
-// Por esto:
-if (typeof _supabase === 'undefined') {
-    console.error("Supabase no está definido. Revisa supabaseClient.js.");
-    return;
-}
-        }
+    try {
+        // Consultas a Supabase
+        const { data: ent, error: errEnt } = await _supabase.from('registros').select('*');
+        const { data: sal, error: errSal } = await _supabase.from('ofassalida').select('*');
 
-    // Consultas a Supabase
-const { data: ent, error: errEnt } = await _supabase.from('registros').select('*');
-const { data: sal, error: errSal } = await _supabase.from('ofassalida').select('*');
-
-const { data: maxRes } = await _supabase
-    .from('registros')
-    .select('consecutivo')
-    .order('consecutivo', { ascending: false })
-    .limit(1);
+        const { data: maxRes } = await _supabase
+            .from('registros')
+            .select('consecutivo')
+            .order('consecutivo', { ascending: false })
+            .limit(1);
 
         if (maxRes && maxRes.length > 0) {
             maxConsecutivoReal = maxRes[0].consecutivo;
         }
 
+        // Continúa la lógica de renderizado de contadores/tablas...
+
+    } catch (err) {
+        console.error("Error al obtener datos:", err);
+    }
+}
         dE_Full = ent || []; 
         dS_Full = sal || [];
         applyFilters();
