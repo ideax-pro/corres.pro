@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>METAX | Centro de Operaciones Pro</title>
+
     
     <!-- Librerías Externas -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -12,6 +13,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+<script src="supabaseClient.js"></script>
+    
     <style>
         :root { --bg: #060b13; --card: rgba(17, 24, 39, 0.95); --accent: #00f2fe; --green: #10b981; --text: #f3f4f6; --border: rgba(255,255,255,0.1); }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 25px; background-image: radial-gradient(circle at top right, #111827, #060b13); }
@@ -151,13 +154,12 @@
 </div>
 
 <script>
-    const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0eGx1cXd2c3Brd256b2Rnd2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwODg3MTYsImV4cCI6MjA4NTY2NDcxNn0.H72PXqbm5RW1w5Qz9AK45506jIGfHp6syVyOZKnlX1E';
-    const _db = supabase.createClient('https://ltxluqwvspkwnzodgwim.supabase.co', API_KEY);
+  
     
     let listaEnlaces = [];
 
     async function cargarCombo() {
-        const { data, error } = await _db.from('direnlaces').select('*').order('sujeto');
+        const { data, error } = await _supabase.from('direnlaces').select('*').order('sujeto');
         if (error) { console.error("Error:", error.message); return; }
 
         listaEnlaces = data || [];
@@ -240,9 +242,9 @@
         try {
             let response;
             if(document.getElementById('dir_suj_new').readOnly) {
-                response = await _db.from('direnlaces').update(payload).eq('sujeto', suj);
+                response = await _supabase.from('direnlaces').update(payload).eq('sujeto', suj);
             } else {
-                response = await _db.from('direnlaces').insert([payload]);
+                response = await _supabase.from('direnlaces').insert([payload]);
             }
 
             if (response.error) throw new Error(response.error.message);
@@ -265,7 +267,7 @@
     async function eliminarSujeto() {
         const sel = document.getElementById('comboSujeto').value;
         if(sel && confirm("¿Eliminar definitivamente?")) {
-            await _db.from('direnlaces').delete().eq('sujeto', sel);
+            await _supabase.from('direnlaces').delete().eq('sujeto', sel);
             await cargarCombo();
             document.getElementById('view_ent').value = '';
             document.getElementById('view_enl').value = '';
@@ -323,8 +325,8 @@
     }
 
     async function backupTotal() { 
-        const { data: reg } = await _db.from('registros').select('*'); 
-        const { data: ofas } = await _db.from('ofassalida').select('*'); 
+        const { data: reg } = await _supabase.from('registros').select('*'); 
+        const { data: ofas } = await _supabase.from('ofassalida').select('*'); 
         if(!reg || !ofas) return alert("Error al obtener los datos de la base de datos."); 
         const wb = XLSX.utils.book_new(); 
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reg), "Registros"); 
