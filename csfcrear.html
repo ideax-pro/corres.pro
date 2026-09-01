@@ -478,7 +478,7 @@
         `;
     };
 
- window.down = async function(id, tipo) {
+window.down = async function(id, tipo) {
     mostrarNotificacion('PROCESANDO', 'Generando documento Word...');
     try {
         const { data: r, error: dbErr } = await client.from('ofassalida').select('*').eq('id', id).single();
@@ -494,13 +494,17 @@
             url = `https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/${encodeURIComponent(bucketDefault)}/${encodeURIComponent(fileDefault)}`;
         }
 
+        // LIMPIEZA CLAVE: Eliminar corchetes, espacios o caracteres extraños al final de la URL
+        url = url.trim().replace(/[\]\[]$/, '');
+
         let buf;
         const urlDecodificada = decodeURIComponent(url);
         const match = urlDecodificada.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
 
         if (match) {
             const bucketName = match[1];
-            const filePath = match[2];
+            // Sanitizar la ruta del archivo quitando caracteres no deseados al final
+            const filePath = match[2].trim().replace(/[\]\[]$/, '');
 
             const { data: fileData, error: downloadErr } = await client.storage.from(bucketName).download(filePath);
             if (downloadErr) {
@@ -515,12 +519,8 @@
         }
 
         const uint8 = new Uint8Array(buf.slice(0, 4));
-        
-        // Si no empieza con los bytes mágicos "PK" (0x50, 0x4B)
         if (uint8[0] !== 0x50 || uint8[1] !== 0x4B) {
-            const textoDevuelto = new TextDecoder().decode(buf);
-            console.error("Contenido recibido en lugar de .docx:", textoDevuelto);
-            throw new Error("El servidor devolvió un error en lugar de un archivo Word. Revisa la consola.");
+            throw new Error("El archivo en Supabase Storage no es un .docx binario válido.");
         }
 
         const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
