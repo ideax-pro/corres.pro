@@ -481,11 +481,9 @@
    window.down = async function(id, tipo) {
     mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
     try {
-        // 1. Obtener datos del registro activo
         const { data: r, error: dbErr } = await client.from('ofassalida').select('*').eq('id', id).single();
         if (dbErr) throw new Error("No se pudieron obtener los datos de la base de datos.");
 
-        // 2. Obtener la URL seleccionada en el <select>
         const selectId = tipo === 'solicitud' ? `select-sol-${id}` : `select-res-${id}`;
         const selectElem = document.getElementById(selectId);
         let url = selectElem ? selectElem.value : null;
@@ -497,58 +495,61 @@
         }
 
         let buf;
-
-        // 3. Intento de descarga usando la SDK oficial de Supabase
-        // Decodificamos la URL por si contiene caracteres como %20
         const urlDecodificada = decodeURIComponent(url);
         const match = urlDecodificada.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
 
         if (match) {
-            const bucketName = match[1];
-            const filePath = match[2];
-
-            const { data: fileData, error: downloadErr } = await client.storage.from(bucketName).download(filePath);
-            
-            if (downloadErr) {
-                console.error("Error directo de Supabase Storage:", downloadErr);
-                throw new Error(`Bucket: "${bucketName}" | Archivo: "${filePath}" no encontrado o sin acceso público.`);
-            }
-            
+            const { data: fileData, error: downloadErr } = await client.storage.from(match[1]).download(match[2]);
+            if (downloadErr) throw downloadErr;
             buf = await fileData.arrayBuffer();
         } else {
-            // Respaldos por fetch HTTP directo
             const res = await fetch(encodeURI(url));
-            if (!res.ok) throw new Error(`Error HTTP ${res.status} al solicitar la plantilla.`);
+            if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
             buf = await res.arrayBuffer();
         }
 
-        // 4. Validar firma binaria de archivo Zip / Docx (bytes 0x50, 0x4B = "PK")
         const uint8 = new Uint8Array(buf.slice(0, 4));
-        if (uint8[0] !== 0x50 || uint8[1] !== 0x4B) {
-            // Convertimos la respuesta recibida a texto para diagnosticar si fue un error JSON de Supabase
-            const errorText = new TextDecoder().decode(buf);
-            console.error("Respuesta recibida del servidor (no es docx):", errorText);
-            throw new Error("El archivo en Supabase Storage no es un .docx válido (posible error 404 en el servidor).");
+        
+        // SI ES UN DOCX BINARIO REAL (bytes 'PK')
+        if (uint8[0] === 0x50 && uint8[1] === 0x4B) {
+            const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
+            doc.setData({
+                ...r, 
+                fecha: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+            });
+            doc.render();
+            saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_CSF_${r.csf_salida || id}.docx`);
+        } 
+        // SI ES UN ARCHIVO DE TEXTO PLANO PLANO RECUPERADO
+        else {
+            let plantillaTexto = new TextDecoder().decode(buf);
+            
+            // Reemplazo manual de etiquetas
+            const mapaDatos = {
+                '{csf_salida}': r.csf_salida || '',
+                '{asunto}': r.asunto || '',
+                '{fecha}': new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+                '{dirigido_a}': r.dirigido_a || '',
+                '{dep_dirigi}': r.dep_dirigi || '',
+                '{oficio_emisor}': r.oficio_emisor || '',
+                '{OFA Entrada}': r["OFA Entrada"] || '',
+                '{firmante}': r.firmante || ''
+            };
+
+            for (const [key, value] of Object.entries(mapaDatos)) {
+                plantillaTexto = plantillaTexto.replaceAll(key, value);
+            }
+
+            const blob = new Blob([plantillaTexto], { type: "text/plain;charset=utf-8" });
+            saveAs(blob, `${tipo.toUpperCase()}_CSF_${r.csf_salida || id}.txt`);
         }
 
-        // 5. Procesar el documento con Docxtemplater
-        const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
-        
         const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        
-        doc.setData({
-            ...r, 
-            fecha: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-        });
-        
-        doc.render();
-        saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_CSF_${r.csf_salida || id}.docx`);
-
         historialDescargas[`${id}_${tipo}`] = fechaActual;
         const elemDate = document.getElementById(tipo === 'solicitud' ? `date-${id}-sol` : `date-${id}-res`);
         if (elemDate) elemDate.innerText = fechaActual;
 
-        mostrarNotificacion('ÉXITO', 'Documento descargado correctamente.');
+        mostrarNotificacion('ÉXITO', 'Documento procesado correctamente.');
     } catch (err) {
         console.error("Detalle completo del error:", err);
         mostrarNotificacion('ERROR', err.message || 'Ocurrió un error al generar el documento.');
