@@ -29,6 +29,21 @@
             min-height: 100vh;
         }
 
+        /* Overlay de Carga General */
+        #global-loader {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(11, 15, 26, 0.85); backdrop-filter: blur(8px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 10000; opacity: 0; pointer-events: none; transition: 0.3s;
+        }
+        #global-loader.active { opacity: 1; pointer-events: auto; }
+        .spinner {
+            width: 50px; height: 50px; border: 4px solid rgba(0, 242, 254, 0.1);
+            border-top: 4px solid var(--accent); border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         .glass-header {
             display: flex; justify-content: space-between; align-items: center;
             background: rgba(22, 30, 45, 0.7); backdrop-filter: blur(10px);
@@ -37,9 +52,10 @@
         }
 
         .search-input {
-            width: 350px; background: rgba(0,0,0,0.2); border: 1px solid var(--border);
-            padding: 10px 15px; border-radius: 12px; color: white; outline: none;
+            width: 320px; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+            padding: 10px 15px; border-radius: 12px; color: white; outline: none; transition: 0.3s;
         }
+        .search-input:focus { border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 242, 254, 0.2); }
 
         .btn-action {
             background: rgba(255,255,255,0.03); border: 1px solid var(--border);
@@ -47,18 +63,12 @@
             font-weight: 700; font-size: 0.65rem; transition: 0.3s; text-decoration: none;
             display: inline-flex; align-items: center; gap: 6px; justify-content: center;
         }
-
         .btn-neon-green:hover {
             background: var(--green) !important; color: #000 !important;
             box-shadow: 0 0 15px var(--green); transform: translateY(-2px);
         }
-
-        .btn-accent {
-            background: rgba(0, 242, 254, 0.1); border-color: var(--accent); color: var(--accent);
-        }
-        .btn-accent:hover {
-            background: var(--accent); color: #000; box-shadow: 0 0 12px var(--accent);
-        }
+        .btn-accent { background: rgba(0, 242, 254, 0.1); border-color: var(--accent); color: var(--accent); }
+        .btn-accent:hover { background: var(--accent); color: #000; box-shadow: 0 0 12px var(--accent); }
 
         .score-container { display: flex; gap: 8px; margin: 10px 0; }
         .score-pill {
@@ -70,10 +80,15 @@
         .download-date { font-size: 0.55rem; display: block; margin-top: 4px; color: var(--dim); font-weight: normal; font-family: monospace; }
 
         .filter-console {
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex; justify-content: space-between; align-items: center; gap: 15px;
             margin-bottom: 20px; background: rgba(255, 255, 255, 0.03);
-            padding: 15px 25px; border-radius: 15px; border: 1px solid var(--border);
+            padding: 15px 25px; border-radius: 15px; border: 1px solid var(--border); flex-wrap: wrap;
         }
+        .filter-select {
+            background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: white;
+            padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; outline: none; cursor: pointer;
+        }
+        .filter-select option { background: var(--panel); color: white; }
 
         .filter-btn {
             background: transparent; border: 1px solid var(--border); color: var(--dim);
@@ -81,20 +96,22 @@
         }
         .filter-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
 
+        /* Contenedor Principal Ajustado: Mayor Área de Vista Previa (520px) */
         .dashboard-container {
             display: grid;
-            grid-template-columns: 1fr 420px;
-            gap: 20px;
-            align-items: start;
+            grid-template-columns: 1fr 520px;
+            gap: 20px; align-items: start;
+        }
+        @media (max-width: 1200px) {
+            .dashboard-container { grid-template-columns: 1fr; }
         }
 
         .group-section { background: rgba(255, 255, 255, 0.02); padding: 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 30px; }
         .group-label { font-size: 0.9rem; font-weight: 700; color: var(--accent); margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        
         .progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 20px; overflow: hidden; display: flex; }
         .progress-fill { height: 100%; transition: 0.5s; }
 
-        .grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
+        .grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
         
         .tech-card {
             background: var(--bg-card-gradient); border-radius: 16px; padding: 18px;
@@ -119,31 +136,21 @@
             color: var(--accent); padding: 6px 10px; border-radius: 8px; font-size: 0.7rem; outline: none; margin-top: 4px;
         }
 
+        /* Panel Ampliado de Vista Previa Lateral */
         .preview-panel {
-            position: sticky; top: 100px;
+            position: sticky; top: 90px;
             background: var(--panel); border: 1px solid var(--border);
-            border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 15px;
-            min-height: 500px; max-height: calc(100vh - 120px); overflow-y: auto;
+            border-radius: 20px; padding: 25px; display: flex; flex-direction: column; gap: 15px;
+            min-height: 600px; max-height: calc(100vh - 110px); overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-
-        .preview-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .preview-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
         .preview-content {
-            background: #ffffff; color: #111827; padding: 20px; border-radius: 12px;
-            font-size: 0.8rem; line-height: 1.5; min-height: 350px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+            background: #ffffff; color: #1f2937; padding: 30px; border-radius: 12px;
+            font-family: 'Times New Roman', Times, serif; font-size: 0.9rem; line-height: 1.6;
+            min-height: 480px; box-shadow: inset 0 0 15px rgba(0,0,0,0.08); border: 1px solid #e5e7eb;
         }
 
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
-            display: flex; justify-content: center; align-items: center; z-index: 999;
-            opacity: 0; pointer-events: none; transition: 0.3s;
-        }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-card {
-            background: var(--panel); border: 1px solid var(--border); border-radius: 20px;
-            padding: 25px; width: 450px; max-width: 90%; color: white;
-        }
-        
         #toast-container { position: fixed; top: 25px; right: 25px; z-index: 9999; }
         .toast {
             background: rgba(22, 30, 45, 0.95); border-left: 4px solid var(--accent); color: white;
@@ -156,14 +163,19 @@
 </head>
 <body>
 
+<div id="global-loader">
+    <div class="spinner"></div>
+    <p id="loader-text" style="color: var(--accent); margin-top: 15px; font-size: 0.85rem; font-weight: bold; tracking-wide: 1px;">CARGANDO REGISTROS...</p>
+</div>
+
 <div id="toast-container"></div>
 
 <div class="glass-header">
     <div>
         <h1 style="margin:0; font-size:1.6rem">📄CORRES PRO <span style="font-weight:100">DASHBOARD</span></h1>
-        <p style="margin:0; font-size:0.7rem; color:var(--dim)">SISTEMA DE CONSULTA E HISTORIAL DE DESCARGAS</p>
+        <p style="margin:0; font-size:0.7rem; color:var(--dim)">SISTEMA DE CONSULTA E HISTORIAL DE DESCARGAS 2026</p>
     </div>
-    <input type="text" id="mainSearch" class="search-input" placeholder="Buscar por nombre, entidad o folio..." onkeyup="busquedaReal()">
+    <input type="text" id="mainSearch" class="search-input" placeholder="Buscar destinatario, oficio, folio..." onkeyup="aplicarFiltrosCombinados()">
     <div style="display:flex; gap:10px">
         <a href="generar.html" class="btn-action btn-accent"><i class="fas fa-plus-circle"></i> GENERAR PLANTILLA</a>
         <a href="menu.html" class="btn-action"><i class="fas fa-th-large"></i> MENÚ</a>
@@ -173,12 +185,27 @@
 </div>
 
 <div class="filter-console">
-    <div style="display: flex; gap: 12px;">
-        <button class="filter-btn active" onclick="filtrarVista('todos', this)">VISTA TOTAL <span id="count-todos">0</span></button>
-        <button class="filter-btn" onclick="filtrarVista('pendientes', this)">PENDIENTES <span id="count-pendientes">0</span></button>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <button class="filter-btn active" id="btn-tab-todos" onclick="cambiarTab('todos')">VISTA TOTAL <span id="count-todos">0</span></button>
+        <button class="filter-btn" id="btn-tab-pendientes" onclick="cambiarTab('pendientes')">PENDIENTES <span id="count-pendientes">0</span></button>
     </div>
 
-    <div id="mini-stats" style="display: flex; gap: 20px; padding: 0 20px; border-left: 1px solid var(--border);">
+    <!-- Filtros de Fecha y Estatus Adicionales -->
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <select id="filter-estatus" class="filter-select" onchange="aplicarFiltrosCombinados()">
+            <option value="todos">Todos los Estatus</option>
+            <option value="procesado">Solo Procesados</option>
+            <option value="pendiente">Solo Pendientes</option>
+        </select>
+
+        <select id="filter-fecha" class="filter-select" onchange="aplicarFiltrosCombinados()">
+            <option value="todos">Todas las Fechas</option>
+            <option value="recientes">Más Recientes primero</option>
+            <option value="antiguos">Más Antiguos primero</option>
+        </select>
+    </div>
+
+    <div id="mini-stats" style="display: flex; gap: 20px; padding: 0 10px; border-left: 1px solid var(--border);">
         <div style="text-align: center;">
             <span style="display: block; font-size: 0.6rem; color: var(--status-pending); font-weight: bold; text-transform: uppercase;">Solicitudes</span>
             <span id="stat-solicitudes" style="font-size: 1.2rem; font-weight: 800; color: var(--text);">0</span>
@@ -195,12 +222,15 @@
 
     <div class="preview-panel">
         <div class="preview-header">
-            <span style="font-size: 0.8rem; font-weight: bold; color: var(--accent);"><i class="fas fa-eye"></i> VISTA PREVIA INDIVIDUAL</span>
-            <span id="preview-folio-tag" style="font-size: 0.7rem; color: var(--dim)">Seleccione un folio</span>
+            <span style="font-size: 0.85rem; font-weight: bold; color: var(--accent);"><i class="fas fa-eye"></i> VISTA PREVIA DETALLADA</span>
+            <span id="preview-folio-tag" style="font-size: 0.75rem; color: var(--dim)">Seleccione un documento</span>
         </div>
         
         <div id="preview-body" class="preview-content">
-            <p style="color:#6b7280; text-align:center; margin-top:100px;">Selecciona una tarjeta de folio a la izquierda para visualizar la vista previa de la plantilla con los datos del documento.</p>
+            <p style="color:#9ca3af; text-align:center; margin-top:160px; font-family: sans-serif;">
+                <i class="fas fa-file-alt" style="font-size:2.5rem; display:block; margin-bottom:10px; color:#d1d5db;"></i>
+                Haz clic en una tarjeta del panel izquierdo para previsualizar la información formateada de la plantilla.
+            </p>
         </div>
     </div>
 </div>
@@ -209,16 +239,28 @@
     const client = window._supabase || window.supabaseClient;
 
     let datosLocales = [];
-    let filtroActual = 'todos';
+    let tabActual = 'todos';
     const historialDescargas = {};
     let folioSeleccionado = null;
     let plantillasDinamicas = [];
 
     window.addEventListener('DOMContentLoaded', init);
 
+    function toggleLoader(show, texto = "CARGANDO...") {
+        const loader = document.getElementById('global-loader');
+        const txt = document.getElementById('loader-text');
+        if (txt) txt.innerText = texto;
+        if (loader) {
+            if (show) loader.classList.add('active');
+            else loader.classList.remove('active');
+        }
+    }
+
     async function init() {
+        toggleLoader(true, "CONECTANDO CON SUPABASE...");
         if (!client) {
             console.error("El cliente de Supabase no está disponible.");
+            toggleLoader(false);
             return;
         }
 
@@ -227,11 +269,14 @@
         const { data, error } = await client.from('ofassalida').select('*');
         if (error) {
             console.error("Error al obtener datos:", error);
+            mostrarNotificacion("ERROR", "No se pudieron obtener los datos de la tabla ofassalida");
+            toggleLoader(false);
             return;
         }
         datosLocales = data.sort((a, b) => (b.csf_salida || b.consecutivo || 0) - (a.csf_salida || a.consecutivo || 0));
         actualizarContadores();
-        aplicarRender();
+        aplicarFiltrosCombinados();
+        toggleLoader(false);
     }
 
     async function cargarPlantillasDesdeSupabase() {
@@ -269,42 +314,67 @@
         const totalSolicitudes = datosLocales.filter(r => r["OFA Entrada"] && r["OFA Entrada"] !== '---').length;
         const totalRespuestas = datosLocales.filter(r => r["OFA Salida"] && r["OFA Salida"] !== 'Pendiente' && r["OFA Salida"] !== '').length;
 
-        const elemTodos = document.getElementById('count-todos');
-        const elemPendientes = document.getElementById('count-pendientes');
-        const elemStatSol = document.getElementById('stat-solicitudes');
-        const elemStatRes = document.getElementById('stat-respuestas');
-
-        if (elemTodos) elemTodos.innerText = totalRegistros;
-        if (elemPendientes) elemPendientes.innerText = pendientes;
-        if (elemStatSol) elemStatSol.innerText = totalSolicitudes;
-        if (elemStatRes) elemStatRes.innerText = totalRespuestas;
+        document.getElementById('count-todos').innerText = totalRegistros;
+        document.getElementById('count-pendientes').innerText = pendientes;
+        document.getElementById('stat-solicitudes').innerText = totalSolicitudes;
+        document.getElementById('stat-respuestas').innerText = totalRespuestas;
     }
 
-    window.filtrarVista = function(tipo, btn) {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        if (btn) btn.classList.add('active');
-        filtroActual = tipo;
-        aplicarRender();
+    window.cambiarTab = function(tipo) {
+        tabActual = tipo;
+        document.getElementById('btn-tab-todos').classList.toggle('active', tipo === 'todos');
+        document.getElementById('btn-tab-pendientes').classList.toggle('active', tipo === 'pendientes');
+        aplicarFiltrosCombinados();
     };
 
-    window.busquedaReal = function() {
-        const q = document.getElementById('mainSearch').value.toLowerCase();
-        document.querySelectorAll('.tech-card').forEach(c => {
-            const index = c.getAttribute('data-index') || '';
-            c.style.display = index.includes(q) ? 'flex' : 'none';
-        });
+    window.aplicarFiltrosCombinados = function() {
+        const query = document.getElementById('mainSearch').value.toLowerCase().trim();
+        const estatusVal = document.getElementById('filter-estatus').value;
+        const fechaVal = document.getElementById('filter-fecha').value;
+
+        let resultado = [...datosLocales];
+
+        // 1. Filtrar por Tab
+        if (tabActual === 'pendientes') {
+            resultado = resultado.filter(r => !r["OFA Salida"] || r["OFA Salida"] === 'Pendiente');
+        }
+
+        // 2. Filtrar por Estatus selector
+        if (estatusVal === 'procesado') {
+            resultado = resultado.filter(r => r["OFA Salida"] && r["OFA Salida"] !== 'Pendiente');
+        } else if (estatusVal === 'pendiente') {
+            resultado = resultado.filter(r => !r["OFA Salida"] || r["OFA Salida"] === 'Pendiente');
+        }
+
+        // 3. Filtrar por Búsqueda de texto
+        if (query) {
+            resultado = resultado.filter(r => {
+                const searchStr = `${r.dirigido_a||''} ${r.destinatario||''} ${r.dep_dirigi||''} ${r.dependencia||''} ${r.csf_salida||''} ${r.consecutivo||''} ${r.oficio_emisor||''} ${r.asunto||''}`.toLowerCase();
+                return searchStr.includes(query);
+            });
+        }
+
+        // 4. Ordenamiento por fecha/folio
+        if (fechaVal === 'antiguos') {
+            resultado.sort((a, b) => (a.csf_salida || a.consecutivo || 0) - (b.csf_salida || b.consecutivo || 0));
+        } else if (fechaVal === 'recientes') {
+            resultado.sort((a, b) => (b.csf_salida || b.consecutivo || 0) - (a.csf_salida || a.consecutivo || 0));
+        }
+
+        renderizarTarjetas(resultado);
     };
 
-    function aplicarRender() {
+    function renderizarTarjetas(lista) {
         const view = document.getElementById('main-view');
         if (!view) return;
         view.innerHTML = '';
-        
-        let filtrados = filtroActual === 'pendientes' 
-            ? datosLocales.filter(r => !r["OFA Salida"] || r["OFA Salida"] === 'Pendiente') 
-            : datosLocales;
 
-        const grupos = filtrados.reduce((acc, obj) => {
+        if (lista.length === 0) {
+            view.innerHTML = `<div style="text-align:center; padding:50px; color:var(--dim);">No se encontraron registros que coincidan con los filtros aplicados.</div>`;
+            return;
+        }
+
+        const grupos = lista.reduce((acc, obj) => {
             const key = obj["OFA Entrada"] || "ORIGEN NO DEFINIDO";
             if (!acc[key]) acc[key] = [];
             acc[key].push(obj);
@@ -330,8 +400,8 @@
                 <div class="grid-layout">
                     ${folios.map(r => {
                         const isDone = r["OFA Salida"] && r["OFA Salida"] !== 'Pendiente';
-                        const fechaSol = historialDescargas[`${r.id}_solicitud`] || "Nunca descargado";
-                        const fechaRes = historialDescargas[`${r.id}_respuesta`] || "Nunca descargado";
+                        const fechaSol = historialDescargas[`${r.id}_solicitud`] || r.fecha_descarga_solicitud || "Nunca descargado";
+                        const fechaRes = historialDescargas[`${r.id}_respuesta`] || r.fecha_descarga_respuesta || "Nunca descargado";
 
                         const folioSalida = r.csf_salida || r.consecutivo || r.folio_csf || 'S/F';
                         const destinatario = r.dirigido_a || r.destinatario || '---';
@@ -341,10 +411,10 @@
                         const asuntoText = r.asunto || r.csf_solicitud || 'Sin asunto registrado...';
 
                         return `
-                        <div class="tech-card ${isDone ? 'completed' : 'pending'}" id="card-${r.id}" data-id="${r.id}" data-index="${(destinatario + dependencia + folioSalida + oficioEmisor).toLowerCase()}" onclick="seleccionarFolio('${r.id}')">
+                        <div class="tech-card ${isDone ? 'completed' : 'pending'} ${folioSeleccionado && folioSeleccionado.id == r.id ? 'selected' : ''}" id="card-${r.id}" onclick="seleccionarFolio('${r.id}')">
                             <div style="display:flex; justify-content:space-between; align-items:center">
                                 <span class="data-label" style="color:var(--accent); font-weight:bold">FOLIO: CSF/${folioSalida}/2026</span>
-                                <div class="ofa-salida-tag ${isDone ? 'tag-done' : 'tag-pending'}">${r["OFA Salida"] || 'PENDIENTE'}</div>
+                                <div class="ofa-salida-tag ${isDone ? 'tag-done' : 'tag-pending'}" id="tag-status-${r.id}">${r["OFA Salida"] || 'PENDIENTE'}</div>
                             </div>
 
                             <div class="score-container">
@@ -435,40 +505,44 @@
         const dependencia = folioSeleccionado.dep_dirigi || folioSeleccionado.dependencia || '';
         const firmante = folioSeleccionado.firmante || folioSeleccionado.modificado_por || '---';
         const asunto = folioSeleccionado.asunto || folioSeleccionado.csf_solicitud || 'Sin asunto registrado.';
+        const ofaSalida = folioSeleccionado["OFA Salida"] || 'PENDIENTE';
 
-        const tagFolio = document.getElementById('preview-folio-tag');
-        if (tagFolio) tagFolio.innerText = `CSF/${folioSalida}/2026`;
+        document.getElementById('preview-folio-tag').innerText = `CSF/${folioSalida}/2026`;
 
         const previewContainer = document.getElementById('preview-body');
         if (!previewContainer) return;
 
         previewContainer.innerHTML = `
-            <div style="text-align:right; font-size:0.7rem; color:#6b7280; border-bottom:1px solid #e5e7eb; padding-bottom:8px; margin-bottom:12px;">
-                <strong>OFICIO EMISOR:</strong> ${oficio}<br>
-                <strong>FECHA:</strong> ${fechaFormat}
+            <div style="text-align:right; font-size:0.8rem; color:#4b5563; border-bottom:2px solid #3b82f6; padding-bottom:12px; margin-bottom:20px;">
+                <strong>OFICIO DE EMISIÓN:</strong> ${oficio}<br>
+                <strong>FECHA DE REGISTRO:</strong> ${fechaFormat}<br>
+                <span style="color:${ofaSalida === 'PENDIENTE' ? '#d97706' : '#059669'}; font-weight:bold;">ESTATUS: ${ofaSalida}</span>
             </div>
             
-            <div style="margin-bottom:12px;">
-                <strong>PARA:</strong> ${dirigido}<br>
-                <span style="font-size:0.75rem; color:#4b5563;">${dependencia}</span>
+            <div style="margin-bottom:18px;">
+                <span style="font-size:0.75rem; text-transform:uppercase; color:#6b7280; font-family:sans-serif; font-weight:bold; display:block;">DESTINATARIO</span>
+                <strong style="font-size:1.05rem; color:#111827;">${dirigido}</strong><br>
+                <span style="font-size:0.85rem; color:#4b5563; font-style:italic;">${dependencia}</span>
             </div>
 
-            <div style="margin-bottom:15px; font-size:0.75rem;">
-                <strong>FIRMANTE / ATIENDE:</strong> ${firmante}
+            <div style="margin-bottom:20px; background:#f9fafb; padding:12px; border-radius:8px; border-left:4px solid #3b82f6;">
+                <span style="font-size:0.75rem; text-transform:uppercase; color:#6b7280; font-family:sans-serif; font-weight:bold; display:block;">ASUNTO / REFERENCIA</span>
+                <p style="margin:5px 0 0 0; color:#374151;">${asunto}</p>
             </div>
 
-            <div style="background:#f3f4f6; padding:10px; border-radius:6px; font-size:0.75rem; margin-bottom:15px;">
-                <strong>ASUNTO / DETALLE:</strong><br>${asunto}
+            <div style="margin-bottom:25px;">
+                <span style="font-size:0.75rem; text-transform:uppercase; color:#6b7280; font-family:sans-serif; font-weight:bold; display:block;">RESPONSABLE / FIRMANTE</span>
+                <strong style="color:#1f2937;">${firmante}</strong>
             </div>
 
-            <div style="border-top:1px dashed #d1d5db; padding-top:10px; font-size:0.7rem; color:#6b7280; margin-top:20px;">
-                <em>* Vista previa simplificada vinculada en tiempo real con el registro seleccionado.</em>
+            <div style="border-top:1px dashed #d1d5db; padding-top:15px; font-size:0.75rem; color:#9ca3af; font-family:sans-serif; margin-top:40px;">
+                <i class="fas fa-info-circle"></i> Documento formateado para la vista previa oficial. El diseño gráfico final depende de la plantilla Word seleccionada.
             </div>
         `;
     };
 
     window.down = async function(id, tipo) {
-        mostrarNotificacion('PROCESANDO', 'Generando documento Word...');
+        toggleLoader(true, `GENERANDO DOCX DE ${tipo.toUpperCase()}...`);
         try {
             const { data: r, error: dbErr } = await client.from('ofassalida').select('*').eq('id', id).single();
             if (dbErr) throw new Error("No se pudieron obtener los datos de la base de datos.");
@@ -493,13 +567,12 @@
 
                 const { data: fileData, error: downloadErr } = await client.storage.from(bucketName).download(filePath);
                 if (downloadErr) {
-                    console.error("Error directo de Supabase:", downloadErr);
-                    throw new Error(`El archivo "${filePath}" no existe en el Storage (${bucketName}). Verifica la URL en la tabla 'plantillas'.`);
+                    throw new Error(`El archivo "${filePath}" no existe en el Storage (${bucketName}).`);
                 }
                 buf = await fileData.arrayBuffer();
             } else {
                 const res = await fetch(encodeURI(url));
-                if (!res.ok) throw new Error(`Error HTTP ${res.status} al descargar desde la URL asignada.`);
+                if (!res.ok) throw new Error(`Error HTTP ${res.status} al descargar plantilla.`);
                 buf = await res.arrayBuffer();
             }
 
@@ -518,15 +591,35 @@
             doc.render();
             saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_CSF_${r.csf_salida || r.consecutivo || id}.docx`);
 
+            // Optimización: Actualizar Historial y Estatus en Supabase
             const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
             historialDescargas[`${id}_${tipo}`] = fechaActual;
-            const elemDate = document.getElementById(tipo === 'solicitud' ? `date-${id}-sol` : `date-${id}-res`);
-            if (elemDate) elemDate.innerText = fechaActual;
 
-            mostrarNotificacion('ÉXITO', 'Documento descargado en formato Word (.docx).');
+            const updatePayload = {
+                fecha_modificacion: new Date().toISOString()
+            };
+            if (tipo === 'respuesta') {
+                updatePayload["OFA Salida"] = `PROCESADO (${fechaActual})`;
+            }
+
+            await client.from('ofassalida').update(updatePayload).eq('id', id);
+
+            // Refrescar datos locales
+            const indexLocal = datosLocales.findIndex(d => d.id == id);
+            if (indexLocal !== -1) {
+                if (tipo === 'respuesta') datosLocales[indexLocal]["OFA Salida"] = `PROCESADO (${fechaActual})`;
+            }
+
+            actualizarContadores();
+            aplicarFiltrosCombinados();
+            if (folioSeleccionado && folioSeleccionado.id == id) seleccionarFolio(id);
+
+            mostrarNotificacion('ÉXITO', 'Documento generado e historial actualizado en Supabase.');
         } catch (err) {
             console.error("Detalle del error:", err);
             mostrarNotificacion('ERROR', err.message || 'Ocurrió un error al generar el documento.');
+        } finally {
+            toggleLoader(false);
         }
     };
 
