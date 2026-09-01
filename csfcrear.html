@@ -81,7 +81,6 @@
         }
         .filter-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
 
-        /* Contenedor Principal en Dos Columnas */
         .dashboard-container {
             display: grid;
             grid-template-columns: 1fr 420px;
@@ -120,7 +119,6 @@
             color: var(--accent); padding: 6px 10px; border-radius: 8px; font-size: 0.7rem; outline: none; margin-top: 4px;
         }
 
-        /* Panel de Vista Previa Lateral */
         .preview-panel {
             position: sticky; top: 100px;
             background: var(--panel); border: 1px solid var(--border);
@@ -134,7 +132,6 @@
             font-size: 0.8rem; line-height: 1.5; min-height: 350px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
         }
 
-        /* Modales */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
@@ -160,25 +157,6 @@
 <body>
 
 <div id="toast-container"></div>
-
-<div class="modal-overlay" id="modalPlantilla">
-    <div class="modal-card">
-        <h3 style="margin-top:0; color:var(--accent)"><i class="fas fa-file-word"></i> Gestor de Plantillas (Máx. 3)</h3>
-        <p style="font-size:0.75rem; color:var(--dim)">El cupo máximo de plantillas para este tipo está lleno. Selecciona una plantilla para sustituirla por la nueva:</p>
-        
-        <div id="listaPlantillasSustituir" style="display:flex; flex-direction:column; gap:10px; margin: 15px 0;"></div>
-
-        <div style="margin-top:15px;">
-            <label class="data-label">Nueva Plantilla (.docx)</label>
-            <input type="file" id="inputNuevaPlantilla" accept=".docx" style="margin-top:5px; font-size:0.8rem; color:white;">
-        </div>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
-            <button class="btn-action" onclick="cerrarModalPlantilla()">Cancelar</button>
-            <button class="btn-action btn-accent" onclick="confirmarSustitucion()">Sustituir y Guardar</button>
-        </div>
-    </div>
-</div>
 
 <div class="glass-header">
     <div>
@@ -228,7 +206,6 @@
 </div>
 
 <script>
-    // Referencia resiliente al cliente de Supabase
     const client = window._supabase || window.supabaseClient;
 
     let datosLocales = [];
@@ -252,7 +229,7 @@
             console.error("Error al obtener datos:", error);
             return;
         }
-        datosLocales = data.sort((a, b) => (b.csf_salida || 0) - (a.csf_salida || 0));
+        datosLocales = data.sort((a, b) => (b.csf_salida || b.consecutivo || 0) - (a.csf_salida || a.consecutivo || 0));
         actualizarContadores();
         aplicarRender();
     }
@@ -313,7 +290,8 @@
     window.busquedaReal = function() {
         const q = document.getElementById('mainSearch').value.toLowerCase();
         document.querySelectorAll('.tech-card').forEach(c => {
-            c.style.display = c.getAttribute('data-index').includes(q) ? 'flex' : 'none';
+            const index = c.getAttribute('data-index') || '';
+            c.style.display = index.includes(q) ? 'flex' : 'none';
         });
     };
 
@@ -355,10 +333,17 @@
                         const fechaSol = historialDescargas[`${r.id}_solicitud`] || "Nunca descargado";
                         const fechaRes = historialDescargas[`${r.id}_respuesta`] || "Nunca descargado";
 
+                        const folioSalida = r.csf_salida || r.consecutivo || r.folio_csf || 'S/F';
+                        const destinatario = r.dirigido_a || r.destinatario || '---';
+                        const dependencia = r.dep_dirigi || r.dependencia || '---';
+                        const oficioEmisor = r.oficio_emisor || '---';
+                        const firmante = r.firmante || r.modificado_por || '---';
+                        const asuntoText = r.asunto || r.csf_solicitud || 'Sin asunto registrado...';
+
                         return `
-                        <div class="tech-card ${isDone ? 'completed' : 'pending'}" id="card-${r.id}" data-index="${((r.dirigido_a||'') + (r.dep_dirigi||'') + (r.csf_salida||'')).toLowerCase()}" onclick="seleccionarFolio('${r.id}')">
+                        <div class="tech-card ${isDone ? 'completed' : 'pending'}" id="card-${r.id}" data-id="${r.id}" data-index="${(destinatario + dependencia + folioSalida + oficioEmisor).toLowerCase()}" onclick="seleccionarFolio('${r.id}')">
                             <div style="display:flex; justify-content:space-between; align-items:center">
-                                <span class="data-label" style="color:var(--accent); font-weight:bold">FOLIO: CSF/${r.csf_salida}/2026</span>
+                                <span class="data-label" style="color:var(--accent); font-weight:bold">FOLIO: CSF/${folioSalida}/2026</span>
                                 <div class="ofa-salida-tag ${isDone ? 'tag-done' : 'tag-pending'}">${r["OFA Salida"] || 'PENDIENTE'}</div>
                             </div>
 
@@ -375,26 +360,26 @@
 
                             <div>
                                 <span class="data-label">Destinatario</span>
-                                <span class="data-value">${r.dirigido_a || '---'}</span>
+                                <span class="data-value">${destinatario}</span>
                             </div>
 
                             <div>
                                 <span class="data-label">Entidad / Dependencia</span>
-                                <span class="data-value" style="color:var(--dim)">${r.dep_dirigi || '---'}</span>
+                                <span class="data-value" style="color:var(--dim)">${dependencia}</span>
                             </div>
 
                             <div>
                                 <span class="data-label">Oficio Emisor</span>
-                                <span class="data-value" style="color:var(--accent); font-weight:bold;">${r.oficio_emisor || '---'}</span>
+                                <span class="data-value" style="color:var(--accent); font-weight:bold;">${oficioEmisor}</span>
                             </div>
 
                             <div>
                                 <span class="data-label">Firmante</span>
-                                <span class="data-value" style="color:var(--accent); font-weight:bold;">${r.firmante || '---'}</span>
+                                <span class="data-value" style="color:var(--accent); font-weight:bold;">${firmante}</span>
                             </div>
 
                             <div style="background:rgba(0,0,0,0.2); padding:8px; border-radius:8px; font-size:0.75rem; color:var(--dim); min-height:35px">
-                                ${r.asunto || 'Sin asunto registrado...'}
+                                ${asuntoText}
                             </div>
 
                             <div>
@@ -440,22 +425,26 @@
         folioSeleccionado = datosLocales.find(r => r.id == id);
         if (!folioSeleccionado) return;
 
+        const folioSalida = folioSeleccionado.csf_salida || folioSeleccionado.consecutivo || folioSeleccionado.folio_csf || 'S/F';
+        const oficio = folioSeleccionado.oficio_emisor || 'S/N';
+        const fechaFormat = folioSeleccionado.fecha_modificacion 
+            ? new Date(folioSeleccionado.fecha_modificacion).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+            : new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+            
+        const dirigido = folioSeleccionado.dirigido_a || folioSeleccionado.destinatario || '---';
+        const dependencia = folioSeleccionado.dep_dirigi || folioSeleccionado.dependencia || '';
+        const firmante = folioSeleccionado.firmante || folioSeleccionado.modificado_por || '---';
+        const asunto = folioSeleccionado.asunto || folioSeleccionado.csf_solicitud || 'Sin asunto registrado.';
+
         const tagFolio = document.getElementById('preview-folio-tag');
-        if (tagFolio) tagFolio.innerText = `CSF/${folioSeleccionado.csf_salida}/2026`;
+        if (tagFolio) tagFolio.innerText = `CSF/${folioSalida}/2026`;
 
         const previewContainer = document.getElementById('preview-body');
         if (!previewContainer) return;
 
-        const oficio = folioSeleccionado.oficio_emisor || 'S/N';
-        const fechaFormat = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-        const dirigido = folioSeleccionado.dirigido_a || '---';
-        const dependencia = folioSeleccionado.dep_dirigi || '';
-        const firmante = folioSeleccionado.firmante || '---';
-        const asunto = folioSeleccionado.asunto || 'Sin asunto registrado.';
-
         previewContainer.innerHTML = `
             <div style="text-align:right; font-size:0.7rem; color:#6b7280; border-bottom:1px solid #e5e7eb; padding-bottom:8px; margin-bottom:12px;">
-                <strong>OFICIO:</strong> ${oficio}<br>
+                <strong>OFICIO EMISOR:</strong> ${oficio}<br>
                 <strong>FECHA:</strong> ${fechaFormat}
             </div>
             
@@ -465,82 +454,82 @@
             </div>
 
             <div style="margin-bottom:15px; font-size:0.75rem;">
-                <strong>FIRMANTE:</strong> ${firmante}
+                <strong>FIRMANTE / ATIENDE:</strong> ${firmante}
             </div>
 
             <div style="background:#f3f4f6; padding:10px; border-radius:6px; font-size:0.75rem; margin-bottom:15px;">
-                <strong>ASUNTO:</strong> ${asunto}
+                <strong>ASUNTO / DETALLE:</strong><br>${asunto}
             </div>
 
             <div style="border-top:1px dashed #d1d5db; padding-top:10px; font-size:0.7rem; color:#6b7280; margin-top:20px;">
-                <em>* Vista previa simplificada. El diseño e imágenes finales se aplicarán conforme a la plantilla .docx seleccionada.</em>
+                <em>* Vista previa simplificada vinculada en tiempo real con el registro seleccionado.</em>
             </div>
         `;
     };
 
-window.down = async function(id, tipo) {
-    mostrarNotificacion('PROCESANDO', 'Generando documento Word...');
-    try {
-        const { data: r, error: dbErr } = await client.from('ofassalida').select('*').eq('id', id).single();
-        if (dbErr) throw new Error("No se pudieron obtener los datos de la base de datos.");
+    window.down = async function(id, tipo) {
+        mostrarNotificacion('PROCESANDO', 'Generando documento Word...');
+        try {
+            const { data: r, error: dbErr } = await client.from('ofassalida').select('*').eq('id', id).single();
+            if (dbErr) throw new Error("No se pudieron obtener los datos de la base de datos.");
 
-        const selectId = tipo === 'solicitud' ? `select-sol-${id}` : `select-res-${id}`;
-        const selectElem = document.getElementById(selectId);
-        let url = selectElem ? selectElem.value : null;
+            const selectId = tipo === 'solicitud' ? `select-sol-${id}` : `select-res-${id}`;
+            const selectElem = document.getElementById(selectId);
+            let url = selectElem ? selectElem.value : null;
 
-        if (!url || url === "" || url === "null") {
-            throw new Error(`No hay una plantilla asignada o válida para ${tipo}.`);
-        }
-
-        url = url.trim().replace(/[\]\[]$/, '');
-
-        let buf;
-        const urlDecodificada = decodeURIComponent(url);
-        const match = urlDecodificada.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
-
-        if (match) {
-            const bucketName = match[1];
-            const filePath = match[2].trim().replace(/[\]\[]$/, '');
-
-            const { data: fileData, error: downloadErr } = await client.storage.from(bucketName).download(filePath);
-            if (downloadErr) {
-                console.error("Error directo de Supabase:", downloadErr);
-                throw new Error(`El archivo "${filePath}" no existe en el Storage (${bucketName}). Verifica la URL en la tabla 'plantillas'.`);
+            if (!url || url === "" || url === "null") {
+                throw new Error(`No hay una plantilla asignada o válida para ${tipo}.`);
             }
-            buf = await fileData.arrayBuffer();
-        } else {
-            const res = await fetch(encodeURI(url));
-            if (!res.ok) throw new Error(`Error HTTP ${res.status} al descargar desde la URL asignada.`);
-            buf = await res.arrayBuffer();
+
+            url = url.trim().replace(/[\]\[]$/, '');
+
+            let buf;
+            const urlDecodificada = decodeURIComponent(url);
+            const match = urlDecodificada.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+
+            if (match) {
+                const bucketName = match[1];
+                const filePath = match[2].trim().replace(/[\]\[]$/, '');
+
+                const { data: fileData, error: downloadErr } = await client.storage.from(bucketName).download(filePath);
+                if (downloadErr) {
+                    console.error("Error directo de Supabase:", downloadErr);
+                    throw new Error(`El archivo "${filePath}" no existe en el Storage (${bucketName}). Verifica la URL en la tabla 'plantillas'.`);
+                }
+                buf = await fileData.arrayBuffer();
+            } else {
+                const res = await fetch(encodeURI(url));
+                if (!res.ok) throw new Error(`Error HTTP ${res.status} al descargar desde la URL asignada.`);
+                buf = await res.arrayBuffer();
+            }
+
+            const uint8 = new Uint8Array(buf.slice(0, 4));
+            if (uint8[0] !== 0x50 || uint8[1] !== 0x4B) {
+                throw new Error("El archivo seleccionado no es un .docx binario válido.");
+            }
+
+            const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
+            
+            doc.setData({
+                ...r, 
+                fecha: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+            });
+            
+            doc.render();
+            saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_CSF_${r.csf_salida || r.consecutivo || id}.docx`);
+
+            const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            historialDescargas[`${id}_${tipo}`] = fechaActual;
+            const elemDate = document.getElementById(tipo === 'solicitud' ? `date-${id}-sol` : `date-${id}-res`);
+            if (elemDate) elemDate.innerText = fechaActual;
+
+            mostrarNotificacion('ÉXITO', 'Documento descargado en formato Word (.docx).');
+        } catch (err) {
+            console.error("Detalle del error:", err);
+            mostrarNotificacion('ERROR', err.message || 'Ocurrió un error al generar el documento.');
         }
+    };
 
-        const uint8 = new Uint8Array(buf.slice(0, 4));
-        if (uint8[0] !== 0x50 || uint8[1] !== 0x4B) {
-            throw new Error("El archivo seleccionado no es un .docx binario válido.");
-        }
-
-        const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
-        
-        doc.setData({
-            ...r, 
-            fecha: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-        });
-        
-        doc.render();
-        saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_CSF_${r.csf_salida || id}.docx`);
-
-        const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        historialDescargas[`${id}_${tipo}`] = fechaActual;
-        const elemDate = document.getElementById(tipo === 'solicitud' ? `date-${id}-sol` : `date-${id}-res`);
-        if (elemDate) elemDate.innerText = fechaActual;
-
-        mostrarNotificacion('ÉXITO', 'Documento descargado en formato Word (.docx).');
-    } catch (err) {
-        console.error("Detalle del error:", err);
-        mostrarNotificacion('ERROR', err.message || 'Ocurrió un error al generar el documento.');
-    }
-};
-    
     window.exportarExcel = function() {
         if (!datosLocales || datosLocales.length === 0) {
             mostrarNotificacion('AVISO', 'No hay datos para exportar');
