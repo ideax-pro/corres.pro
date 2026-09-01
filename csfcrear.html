@@ -96,7 +96,6 @@
         }
         .filter-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
 
-        /* Contenedor Principal Ajustado: Mayor Área de Vista Previa (520px) */
         .dashboard-container {
             display: grid;
             grid-template-columns: 1fr 520px;
@@ -136,7 +135,6 @@
             color: var(--accent); padding: 6px 10px; border-radius: 8px; font-size: 0.7rem; outline: none; margin-top: 4px;
         }
 
-        /* Panel Ampliado de Vista Previa Lateral */
         .preview-panel {
             position: sticky; top: 90px;
             background: var(--panel); border: 1px solid var(--border);
@@ -159,13 +157,96 @@
             transform: translateX(120%); transition: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
         .toast.show { transform: translateX(0); }
+
+        /* --- BLOQUE 1: ESTILOS MODAL Y BOTÓN EXPANDIR --- */
+        .btn-expand-preview {
+            background: rgba(0, 242, 254, 0.15);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: bold;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-expand-preview:hover {
+            background: var(--accent);
+            color: #000;
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(11, 15, 26, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 20000; opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1; pointer-events: auto;
+        }
+        .modal-full-container {
+            width: 90vw; height: 90vh;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .modal-full-header {
+            padding: 18px 25px;
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-full-body {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            background: #0b0f1a;
+            display: flex; justify-content: center;
+        }
+        .sheet-paper {
+            background: #ffffff;
+            color: #1f2937;
+            width: 100%; max-width: 850px;
+            min-height: 1000px;
+            padding: 50px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 1rem; line-height: 1.8;
+        }
+        .btn-close-modal {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+            transition: 0.3s;
+        }
+        .btn-close-modal:hover {
+            background: #ef4444;
+            color: #fff;
+            box-shadow: 0 0 10px #ef4444;
+        }
     </style>
 </head>
 <body>
 
 <div id="global-loader">
     <div class="spinner"></div>
-    <p id="loader-text" style="color: var(--accent); margin-top: 15px; font-size: 0.85rem; font-weight: bold; tracking-wide: 1px;">CARGANDO REGISTROS...</p>
+    <p id="loader-text" style="color: var(--accent); margin-top: 15px; font-size: 0.85rem; font-weight: bold;">CARGANDO REGISTROS...</p>
 </div>
 
 <div id="toast-container"></div>
@@ -190,7 +271,6 @@
         <button class="filter-btn" id="btn-tab-pendientes" onclick="cambiarTab('pendientes')">PENDIENTES <span id="count-pendientes">0</span></button>
     </div>
 
-    <!-- Filtros de Fecha y Estatus Adicionales -->
     <div style="display: flex; gap: 10px; align-items: center;">
         <select id="filter-estatus" class="filter-select" onchange="aplicarFiltrosCombinados()">
             <option value="todos">Todos los Estatus</option>
@@ -231,6 +311,30 @@
                 <i class="fas fa-file-alt" style="font-size:2.5rem; display:block; margin-bottom:10px; color:#d1d5db;"></i>
                 Haz clic en una tarjeta del panel izquierdo para previsualizar la información formateada de la plantilla.
             </p>
+        </div>
+    </div>
+</div>
+
+<!-- --- BLOQUE 2: ESTRUCTURA HTML DEL MODAL PREVIEW --- -->
+<div id="previewModal" class="modal-overlay">
+    <div class="modal-full-container">
+        <div class="modal-full-header">
+            <div>
+                <span style="font-size: 1rem; font-weight: bold; color: var(--accent);">
+                    <i class="fas fa-file-alt"></i> DOCUMENTO COMPLETO
+                </span>
+                <span id="modal-folio-tag" style="font-size: 0.8rem; color: var(--dim); margin-left: 10px;">
+                    CSF/----/2026
+                </span>
+            </div>
+            <button class="btn-close-modal" onclick="cerrarModalPreview()">
+                <i class="fas fa-times"></i> CERRAR
+            </button>
+        </div>
+        <div class="modal-full-body">
+            <div id="modal-paper-content" class="sheet-paper">
+                <!-- Se inyecta la vista de lectura a tamaño completo -->
+            </div>
         </div>
     </div>
 </div>
@@ -334,19 +438,16 @@
 
         let resultado = [...datosLocales];
 
-        // 1. Filtrar por Tab
         if (tabActual === 'pendientes') {
             resultado = resultado.filter(r => !r["OFA Salida"] || r["OFA Salida"] === 'Pendiente');
         }
 
-        // 2. Filtrar por Estatus selector
         if (estatusVal === 'procesado') {
             resultado = resultado.filter(r => r["OFA Salida"] && r["OFA Salida"] !== 'Pendiente');
         } else if (estatusVal === 'pendiente') {
             resultado = resultado.filter(r => !r["OFA Salida"] || r["OFA Salida"] === 'Pendiente');
         }
 
-        // 3. Filtrar por Búsqueda de texto
         if (query) {
             resultado = resultado.filter(r => {
                 const searchStr = `${r.dirigido_a||''} ${r.destinatario||''} ${r.dep_dirigi||''} ${r.dependencia||''} ${r.csf_salida||''} ${r.consecutivo||''} ${r.oficio_emisor||''} ${r.asunto||''}`.toLowerCase();
@@ -354,7 +455,6 @@
             });
         }
 
-        // 4. Ordenamiento por fecha/folio
         if (fechaVal === 'antiguos') {
             resultado.sort((a, b) => (a.csf_salida || a.consecutivo || 0) - (b.csf_salida || b.consecutivo || 0));
         } else if (fechaVal === 'recientes') {
@@ -487,6 +587,7 @@
         }
     }
 
+    /* --- BLOQUE 3: FUNCIONES DE SELECCIÓN Y MODAL EXPANDIDO --- */
     window.seleccionarFolio = function(id) {
         document.querySelectorAll('.tech-card').forEach(c => c.classList.remove('selected'));
         const tarjeta = document.getElementById(`card-${id}`);
@@ -512,33 +613,73 @@
         const previewContainer = document.getElementById('preview-body');
         if (!previewContainer) return;
 
+        // Inyección de la vista normal con el nuevo botón
         previewContainer.innerHTML = `
-            <div style="text-align:right; font-size:0.8rem; color:#4b5563; border-bottom:2px solid #3b82f6; padding-bottom:12px; margin-bottom:20px;">
-                <strong>OFICIO DE EMISIÓN:</strong> ${oficio}<br>
-                <strong>FECHA DE REGISTRO:</strong> ${fechaFormat}<br>
-                <span style="color:${ofaSalida === 'PENDIENTE' ? '#d97706' : '#059669'}; font-weight:bold;">ESTATUS: ${ofaSalida}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 15px;">
+                <button class="btn-expand-preview" onclick="abrirModalPreview()">
+                    <i class="fas fa-expand-alt"></i> VER COMPLETO
+                </button>
+                <div style="text-align: right; font-size: 0.75rem; color: #4b5563;">
+                    <strong>OFICIO:</strong> ${oficio}<br>
+                    <span style="color:${ofaSalida === 'PENDIENTE' ? '#d97706' : '#059669'}; font-weight:bold;">${ofaSalida}</span>
+                </div>
             </div>
             
-            <div style="margin-bottom:18px;">
-                <span style="font-size:0.75rem; text-transform:uppercase; color:#6b7280; font-family:sans-serif; font-weight:bold; display:block;">DESTINATARIO</span>
-                <strong style="font-size:1.05rem; color:#111827;">${dirigido}</strong><br>
-                <span style="font-size:0.85rem; color:#4b5563; font-style:italic;">${dependencia}</span>
+            <div style="margin-bottom: 18px;">
+                <span style="font-size:0.7rem; text-transform:uppercase; color:#6b7280; font-family:sans-serif; font-weight:bold; display:block;">DESTINATARIO</span>
+                <strong style="font-size:1rem; color:#111827;">${dirigido}</strong><br>
+                <span style="font-size:0.8rem; color:#4b5563; font-style:italic;">${dependencia}</span>
             </div>
 
-            <div style="margin-bottom:20px; background:#f9fafb; padding:12px; border-radius:8px; border-left:4px solid #3b82f6;">
-                <span style="font-size:0.75rem; text-transform:uppercase; color:#6b7280; font-family:sans-serif; font-weight:bold; display:block;">ASUNTO / REFERENCIA</span>
+            <div style="margin-bottom: 20px; background: #f9fafb; padding: 12px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                <span style="font-size:0.7rem; text-transform:uppercase; color:#6b7280; font-family:sans-serif; font-weight:bold; display:block;">ASUNTO / REFERENCIA</span>
                 <p style="margin:5px 0 0 0; color:#374151;">${asunto}</p>
             </div>
 
-            <div style="margin-bottom:25px;">
-                <span style="font-size:0.75rem; text-transform:uppercase; color:#6b7280; font-family:sans-serif; font-weight:bold; display:block;">RESPONSABLE / FIRMANTE</span>
+            <div style="margin-bottom: 25px;">
+                <span style="font-size:0.7rem; text-transform:uppercase; color:#6b7280; font-family:sans-serif; font-weight:bold; display:block;">RESPONSABLE / FIRMANTE</span>
                 <strong style="color:#1f2937;">${firmante}</strong>
             </div>
+        `;
 
-            <div style="border-top:1px dashed #d1d5db; padding-top:15px; font-size:0.75rem; color:#9ca3af; font-family:sans-serif; margin-top:40px;">
-                <i class="fas fa-info-circle"></i> Documento formateado para la vista previa oficial. El diseño gráfico final depende de la plantilla Word seleccionada.
+        // Cargar contenido formateado también en el contenedor del Modal
+        document.getElementById('modal-folio-tag').innerText = `CSF/${folioSalida}/2026`;
+        document.getElementById('modal-paper-content').innerHTML = `
+            <div style="text-align: right; margin-bottom: 40px; font-size: 0.95rem;">
+                <strong>OFICIO DE EMISIÓN:</strong> ${oficio}<br>
+                <strong>FECHA:</strong> ${fechaFormat}<br>
+                <strong>ESTATUS:</strong> ${ofaSalida}
+            </div>
+            
+            <div style="margin-bottom: 35px;">
+                <strong style="font-size: 1.2rem; text-transform: uppercase;">${dirigido}</strong><br>
+                <span style="font-size: 1rem; color: #4b5563;">${dependencia}</span><br>
+                <strong>PRESENTE.</strong>
+            </div>
+
+            <div style="margin-bottom: 30px; text-align: justify;">
+                <p><strong>ASUNTO:</strong> ${asunto}</p>
+                <p style="margin-top:20px;">Por medio del presente documento se remite la información oficial registrada bajo el folio de seguimiento <strong>CSF/${folioSalida}/2026</strong> para los fines administrativos a que haya lugar.</p>
+            </div>
+
+            <div style="margin-top: 100px; text-align: center;">
+                <p>ATENTAMENTE,</p>
+                <br><br>
+                <strong>${firmante}</strong>
             </div>
         `;
+    };
+
+    window.abrirModalPreview = function() {
+        if (!folioSeleccionado) {
+            mostrarNotificacion("AVISO", "Selecciona primero un folio para visualizar");
+            return;
+        }
+        document.getElementById('previewModal').classList.add('active');
+    };
+
+    window.cerrarModalPreview = function() {
+        document.getElementById('previewModal').classList.remove('active');
     };
 
     window.down = async function(id, tipo) {
@@ -591,7 +732,6 @@
             doc.render();
             saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_CSF_${r.csf_salida || r.consecutivo || id}.docx`);
 
-            // Optimización: Actualizar Historial y Estatus en Supabase
             const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
             historialDescargas[`${id}_${tipo}`] = fechaActual;
 
@@ -604,7 +744,6 @@
 
             await client.from('ofassalida').update(updatePayload).eq('id', id);
 
-            // Refrescar datos locales
             const indexLocal = datosLocales.findIndex(d => d.id == id);
             if (indexLocal !== -1) {
                 if (tipo === 'respuesta') datosLocales[indexLocal]["OFA Salida"] = `PROCESADO (${fechaActual})`;
