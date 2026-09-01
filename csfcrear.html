@@ -489,12 +489,9 @@ window.down = async function(id, tipo) {
         let url = selectElem ? selectElem.value : null;
 
         if (!url || url === "" || url === "null") {
-            const bucketDefault = tipo === 'solicitud' ? 'Plantilla solicitud' : 'plantilla respuesta';
-            const fileDefault = tipo === 'solicitud' ? 'SOLICITUD_CSF_0000.docx' : 'RESPUESTA_CSF_0000.docx';
-            url = `https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/${encodeURIComponent(bucketDefault)}/${encodeURIComponent(fileDefault)}`;
+            throw new Error(`No hay una plantilla asignada o válida para ${tipo}.`);
         }
 
-        // LIMPIEZA CLAVE: Eliminar corchetes, espacios o caracteres extraños al final de la URL
         url = url.trim().replace(/[\]\[]$/, '');
 
         let buf;
@@ -503,24 +500,23 @@ window.down = async function(id, tipo) {
 
         if (match) {
             const bucketName = match[1];
-            // Sanitizar la ruta del archivo quitando caracteres no deseados al final
             const filePath = match[2].trim().replace(/[\]\[]$/, '');
 
             const { data: fileData, error: downloadErr } = await client.storage.from(bucketName).download(filePath);
             if (downloadErr) {
                 console.error("Error directo de Supabase:", downloadErr);
-                throw new Error(`No se pudo acceder a "${filePath}" en "${bucketName}".`);
+                throw new Error(`El archivo "${filePath}" no existe en el Storage (${bucketName}). Verifica la URL en la tabla 'plantillas'.`);
             }
             buf = await fileData.arrayBuffer();
         } else {
             const res = await fetch(encodeURI(url));
-            if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+            if (!res.ok) throw new Error(`Error HTTP ${res.status} al descargar desde la URL asignada.`);
             buf = await res.arrayBuffer();
         }
 
         const uint8 = new Uint8Array(buf.slice(0, 4));
         if (uint8[0] !== 0x50 || uint8[1] !== 0x4B) {
-            throw new Error("El archivo en Supabase Storage no es un .docx binario válido.");
+            throw new Error("El archivo seleccionado no es un .docx binario válido.");
         }
 
         const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
@@ -544,6 +540,7 @@ window.down = async function(id, tipo) {
         mostrarNotificacion('ERROR', err.message || 'Ocurrió un error al generar el documento.');
     }
 };
+    
     window.exportarExcel = function() {
         if (!datosLocales || datosLocales.length === 0) {
             mostrarNotificacion('AVISO', 'No hay datos para exportar');
