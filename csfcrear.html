@@ -481,9 +481,11 @@
    window.down = async function(id, tipo) {
     mostrarNotificacion('PROCESANDO', 'Generando documento oficial...');
     try {
+        // 1. Obtener registro de la BD
         const { data: r, error: dbErr } = await client.from('ofassalida').select('*').eq('id', id).single();
-        if (dbErr) throw new Error("No se pudieron obtener los datos de la base de datos.");
+        if (dbErr) throw new Error("No se pudieron obtener los datos del registro.");
 
+        // 2. Determinar la URL de la plantilla elegida en el selector
         const selectId = tipo === 'solicitud' ? `select-sol-${id}` : `select-res-${id}`;
         const selectElem = document.getElementById(selectId);
         let url = selectElem ? selectElem.value : null;
@@ -494,24 +496,38 @@
                 : "https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/plantilla%20respuesta/CSF-0000-2026-respuesta.docx";
         }
 
-        // Codificación segura de URL para evitar errores por espacios o caracteres especiales
-        const urlSegura = encodeURI(url);
+        let buf;
 
-        // Petición al servidor
-        const res = await fetch(urlSegura);
+        // 3. Extraer bucket y ruta del archivo desde la URL para usar el SDK oficial de Supabase
+        const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+        
+        if (match) {
+            const bucketName = decodeURIComponent(match[1]);
+            const filePath = decodeURIComponent(match[2]);
 
-        if (!res.ok) {
-            throw new Error(`Error HTTP ${res.status}: No se pudo descargar el archivo desde Supabase.`);
+            // Descarga segura mediante el cliente de Supabase (evita problemas de CORS y URL mal formateada)
+            const { data: fileData, error: downloadErr } = await client.storage.from(bucketName).download(filePath);
+            
+            if (downloadErr) {
+                console.error("Error al descargar desde Supabase Storage:", downloadErr);
+                throw new Error(`No se encontró el archivo "${filePath}" en el bucket "${bucketName}". Verfica el Storage.`);
+            }
+            
+            buf = await fileData.arrayBuffer();
+        } else {
+            // Respaldos por fetch HTTP en caso de URL externa
+            const res = await fetch(encodeURI(url));
+            if (!res.ok) throw new Error(`Error HTTP ${res.status} al descargar el archivo.`);
+            buf = await res.arrayBuffer();
         }
 
-        const buf = await res.arrayBuffer();
+        // 4. Validar firma binaria de archivo Zip / Docx (0x50, 0x4B -> "PK")
         const uint8 = new Uint8Array(buf.slice(0, 4));
-
-        // Verificación de los bytes mágicos de un archivo ZIP/DOCX (0x50, 0x4B -> "PK")
         if (uint8[0] !== 0x50 || uint8[1] !== 0x4B) {
-            throw new Error("El archivo devuelto no es un documento .docx válido. Revisa los permisos públicos en Supabase Storage.");
+            throw new Error("El archivo en el Storage está corrupto o no es un .docx válido.");
         }
 
+        // 5. Renderizar plantilla con docxtemplater
         const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
         
         const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -534,6 +550,7 @@
         mostrarNotificacion('ERROR', err.message || 'Ocurrió un error al generar el documento.');
     }
 };
+    
     window.exportarExcel = function() {
         if (!datosLocales || datosLocales.length === 0) {
             mostrarNotificacion('AVISO', 'No hay datos para exportar');
