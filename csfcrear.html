@@ -481,20 +481,16 @@
  window.down = async function(id, tipo) {
     mostrarNotificacion('PROCESANDO', 'Generando documento Word...');
     try {
-        // 1. Obtener registro de la BD
         const { data: r, error: dbErr } = await client.from('ofassalida').select('*').eq('id', id).single();
         if (dbErr) throw new Error("No se pudieron obtener los datos de la base de datos.");
 
-        // 2. Obtener la URL directamente de la opción seleccionada en el menú
         const selectId = tipo === 'solicitud' ? `select-sol-${id}` : `select-res-${id}`;
         const selectElem = document.getElementById(selectId);
-        
         let url = selectElem ? selectElem.value : null;
 
-        // Si no hay nada seleccionado en el menú, se asigna la ruta por defecto según Supabase
         if (!url || url === "" || url === "null") {
             const bucketDefault = tipo === 'solicitud' ? 'Plantilla solicitud' : 'plantilla respuesta';
-            const fileDefault = tipo === 'solicitud' ? 'CSF-0000-2026-solicitud' : 'CSF-0000-2026-respuesta';
+            const fileDefault = tipo === 'solicitud' ? 'SOLICITUD_CSF_0000.docx' : 'RESPUESTA_CSF_0000.docx';
             url = `https://gwfujkcfpugzgqqrsivg.supabase.co/storage/v1/object/public/${encodeURIComponent(bucketDefault)}/${encodeURIComponent(fileDefault)}`;
         }
 
@@ -502,30 +498,31 @@
         const urlDecodificada = decodeURIComponent(url);
         const match = urlDecodificada.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
 
-        // 3. Descarga desde Supabase Storage
         if (match) {
             const bucketName = match[1];
             const filePath = match[2];
 
             const { data: fileData, error: downloadErr } = await client.storage.from(bucketName).download(filePath);
             if (downloadErr) {
-                console.error("Error al descargar de Supabase Storage:", downloadErr);
-                throw new Error(`No se encontró el archivo "${filePath}" en el bucket "${bucketName}".`);
+                console.error("Error directo de Supabase:", downloadErr);
+                throw new Error(`No se pudo acceder a "${filePath}" en "${bucketName}".`);
             }
             buf = await fileData.arrayBuffer();
         } else {
             const res = await fetch(encodeURI(url));
-            if (!res.ok) throw new Error(`Error HTTP ${res.status} al descargar el archivo.`);
+            if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
             buf = await res.arrayBuffer();
         }
 
-        // 4. Validar firma binaria de archivo Word .docx (Bytes 'PK')
         const uint8 = new Uint8Array(buf.slice(0, 4));
+        
+        // Si no empieza con los bytes mágicos "PK" (0x50, 0x4B)
         if (uint8[0] !== 0x50 || uint8[1] !== 0x4B) {
-            throw new Error("El archivo seleccionado no es un documento .docx válido.");
+            const textoDevuelto = new TextDecoder().decode(buf);
+            console.error("Contenido recibido en lugar de .docx:", textoDevuelto);
+            throw new Error("El servidor devolvió un error en lugar de un archivo Word. Revisa la consola.");
         }
 
-        // 5. Renderizar plantilla con docxtemplater
         const doc = new window.docxtemplater(new window.PizZip(buf), { paragraphLoop: true, linebreaks: true });
         
         doc.setData({
@@ -534,8 +531,6 @@
         });
         
         doc.render();
-        
-        // 6. Descargar archivo Word procesado
         saveAs(doc.getZip().generate({ type: "blob" }), `${tipo.toUpperCase()}_CSF_${r.csf_salida || id}.docx`);
 
         const fechaActual = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -543,9 +538,9 @@
         const elemDate = document.getElementById(tipo === 'solicitud' ? `date-${id}-sol` : `date-${id}-res`);
         if (elemDate) elemDate.innerText = fechaActual;
 
-        mostrarNotificacion('ÉXITO', 'Documento Word (.docx) descargado correctamente.');
+        mostrarNotificacion('ÉXITO', 'Documento descargado en formato Word (.docx).');
     } catch (err) {
-        console.error("Detalle completo del error:", err);
+        console.error("Detalle del error:", err);
         mostrarNotificacion('ERROR', err.message || 'Ocurrió un error al generar el documento.');
     }
 };
